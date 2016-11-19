@@ -1,41 +1,21 @@
 #!/bin/bash
-if [[ "$ENABLE_MAINTAINER_ZTS" == 1 ]]; then
-	TS="--enable-maintainer-zts";
-else
-	TS="";
-fi
-if [[ "$ENABLE_DEBUG" == 1 ]]; then
-	DEBUG="--enable-debug";
-else
-	DEBUG="";
-fi
+TS="--enable-maintainer-zts";
+DEBUG="--enable-debug";
 ./buildconf --force
 ./configure \
---prefix=$HOME"/php-install" \
+--prefix=$HOME"/php-7.0.13-install" \
 --quiet \
 $DEBUG \
 $TS \
---enable-phpdbg \
 --enable-fpm \
---with-pdo-mysql=mysqlnd \
---with-mysqli=mysqlnd \
---with-pgsql \
---with-pdo-pgsql \
---with-pdo-sqlite \
 --enable-intl \
---without-pear \
+--with-pear \
 --with-gd \
---with-jpeg-dir=/usr \
---with-png-dir=/usr \
---enable-exif \
---enable-zip \
---with-zlib \
---with-zlib-dir=/usr \
 --with-mcrypt=/usr \
 --enable-soap \
 --enable-xmlreader \
 --with-xsl \
---with-curl=/usr \
+--with-curl \
 --with-tidy \
 --with-xmlrpc \
 --enable-sysvsem \
@@ -44,21 +24,10 @@ $TS \
 --enable-pcntl \
 --with-readline \
 --enable-mbstring \
---with-curl \
+--with-zlib \
 --with-gettext \
 --enable-sockets \
---with-bz2 \
 --with-openssl \
---with-gmp \
---enable-bcmath \
---enable-calendar \
---enable-ftp \
---with-pspell=/usr \
---with-enchant=/usr \
---enable-wddx \
---with-freetype-dir=/usr \
---with-xpm-dir=/usr \
---with-kerberos \
 --enable-sysvmsg 
-make -j2 --quiet
+make -j5
 make install
