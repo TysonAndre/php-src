@@ -71,6 +71,7 @@ PHP_FUNCTION(class_implements);
 PHP_FUNCTION(class_uses);
 
 PHPAPI zend_string *php_spl_object_hash(zval *obj);
+PHPAPI zend_long php_spl_object_id(zval *obj);
 
 #endif /* PHP_SPL_H */
 
