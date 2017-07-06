@@ -28,9 +28,11 @@ PHP                                                                        NEWS
     (Anatol)
 
 - SPL:
+  . Added spl_object_id() function returning an integer (the object handle) for an object.
+    (Tyson Andre)
   . Fixed bug #73471 (PHP freezes with AppendIterator). (jhdxr)
   . Fixed bug #71412 (Incorrect arginfo for ArrayIterator::__construct).
-    (tysonandre775 at hotmail dot com)
+    (Tyson Andre)
 
 - Session:
   . Fixed bug #74514 (5 session functions incorrectly warn when calling in
