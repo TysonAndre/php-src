@@ -144,10 +144,18 @@ static zend_always_inline void zend_hash_real_init_mixed_ex(HashTable *ht)
 	uint32_t nSize = ht->nTableSize;
 
 	if (UNEXPECTED(GC_FLAGS(ht) & IS_ARRAY_PERSISTENT)) {
+        if (nSize < HT_MIN_SIZE_UNPACKED) {
+            nSize = HT_MIN_SIZE_UNPACKED;
+            ht->nTableSize = HT_MIN_SIZE_UNPACKED;
+        }
 		data = pemalloc(HT_SIZE_EX(nSize, HT_SIZE_TO_MASK(nSize)), 1);
-	} else if (EXPECTED(nSize == HT_MIN_SIZE)) {
-		data = emalloc(HT_SIZE_EX(HT_MIN_SIZE, HT_SIZE_TO_MASK(HT_MIN_SIZE)));
-		ht->nTableMask = HT_SIZE_TO_MASK(HT_MIN_SIZE);
+	} else if (EXPECTED(nSize <= HT_MIN_SIZE_UNPACKED)) {
+        if (nSize < HT_MIN_SIZE_UNPACKED) {
+            nSize = HT_MIN_SIZE_UNPACKED;
+            ht->nTableSize = HT_MIN_SIZE_UNPACKED;
+        }
+		data = emalloc(HT_SIZE_EX(HT_MIN_SIZE_UNPACKED, HT_SIZE_TO_MASK(HT_MIN_SIZE_UNPACKED)));
+		ht->nTableMask = HT_SIZE_TO_MASK(HT_MIN_SIZE_UNPACKED);
 		HT_SET_DATA_ADDR(ht, data);
 		/* Don't overwrite iterator count. */
 		ht->u.v.flags = HASH_FLAG_STATIC_KEYS;
@@ -210,6 +218,7 @@ static zend_always_inline void zend_hash_real_init_ex(HashTable *ht, int packed)
 static const uint32_t uninitialized_bucket[-HT_MIN_MASK] =
 	{HT_INVALID_IDX, HT_INVALID_IDX};
 
+// XXX: Is MIN_SIZE_UNPACKED the best choice vs this (8 vs 2)? Haven't benchmarked it.
 ZEND_API const HashTable zend_empty_array = {
 	.gc.refcount = 2,
 	.gc.u.type_info = IS_ARRAY | (GC_IMMUTABLE << GC_FLAGS_SHIFT),
@@ -218,7 +227,7 @@ ZEND_API const HashTable zend_empty_array = {
 	.arData = (Bucket*)&uninitialized_bucket[2],
 	.nNumUsed = 0,
 	.nNumOfElements = 0,
-	.nTableSize = HT_MIN_SIZE,
+	.nTableSize = HT_MIN_SIZE_UNPACKED,
 	.nInternalPointer = 0,
 	.nNextFreeElement = 0,
 	.pDestructor = ZVAL_PTR_DTOR
@@ -244,6 +253,7 @@ ZEND_API void ZEND_FASTCALL _zend_hash_init(HashTable *ht, uint32_t nSize, dtor_
 	_zend_hash_init_int(ht, nSize, pDestructor, persistent);
 }
 
+// TODO should this be 2 or 8? also see zend_new_array
 ZEND_API HashTable* ZEND_FASTCALL _zend_new_array_0(void)
 {
 	HashTable *ht = emalloc(sizeof(HashTable));
@@ -262,6 +272,7 @@ ZEND_API HashTable* ZEND_FASTCALL zend_new_pair(zval *val1, zval *val2)
 {
 	Bucket *p;
 	HashTable *ht = emalloc(sizeof(HashTable));
+    // XXX will need to adjust all calls like this if HT_MIN_SIZE goes below 2
 	_zend_hash_init_int(ht, HT_MIN_SIZE, ZVAL_PTR_DTOR, 0);
 	ht->nNumUsed = ht->nNumOfElements = ht->nNextFreeElement = 2;
 	zend_hash_real_init_packed_ex(ht);
@@ -317,11 +328,12 @@ ZEND_API void ZEND_FASTCALL zend_hash_packed_to_hash(HashTable *ht)
 	void *new_data, *old_data = HT_GET_DATA_ADDR(ht);
 	Bucket *old_buckets = ht->arData;
 	uint32_t nSize = ht->nTableSize;
+    uint32_t nNewSize = nSize >= HT_MIN_SIZE_UNPACKED ? nSize : HT_MIN_SIZE_UNPACKED;
 
 	HT_ASSERT_RC1(ht);
 	HT_FLAGS(ht) &= ~HASH_FLAG_PACKED;
-	new_data = pemalloc(HT_SIZE_EX(nSize, HT_SIZE_TO_MASK(nSize)), GC_FLAGS(ht) & IS_ARRAY_PERSISTENT);
-	ht->nTableMask = HT_SIZE_TO_MASK(ht->nTableSize);
+	new_data = pemalloc(HT_SIZE_EX(nNewSize, HT_SIZE_TO_MASK(nNewSize)), GC_FLAGS(ht) & IS_ARRAY_PERSISTENT);
+	ht->nTableMask = HT_SIZE_TO_MASK(nNewSize);
 	HT_SET_DATA_ADDR(ht, new_data);
 	memcpy(ht->arData, old_buckets, sizeof(Bucket) * ht->nNumUsed);
 	pefree(old_data, GC_FLAGS(ht) & IS_ARRAY_PERSISTENT);
@@ -1158,6 +1170,9 @@ static void ZEND_FASTCALL zend_hash_do_resize(HashTable *ht)
 	} else if (ht->nTableSize < HT_MAX_SIZE) {	/* Let's double the table size */
 		void *new_data, *old_data = HT_GET_DATA_ADDR(ht);
 		uint32_t nSize = ht->nTableSize + ht->nTableSize;
+        if (nSize < HT_MIN_SIZE_UNPACKED) {
+            nSize = HT_MIN_SIZE_UNPACKED;
+        }
 		Bucket *old_buckets = ht->arData;
 
 		ht->nTableSize = nSize;

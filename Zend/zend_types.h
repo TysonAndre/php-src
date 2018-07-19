@@ -302,7 +302,8 @@ struct _zend_array {
 #define HT_INVALID_IDX ((uint32_t) -1)
 
 #define HT_MIN_MASK ((uint32_t) -2)
-#define HT_MIN_SIZE 8
+#define HT_MIN_SIZE 2
+#define HT_MIN_SIZE_UNPACKED 8
 
 #if SIZEOF_SIZE_T == 4
 # define HT_MAX_SIZE 0x04000000 /* small enough to avoid overflow checks */
