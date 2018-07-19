@@ -56,7 +56,7 @@ static void zend_hash_persist_calc(HashTable *ht)
 
 	if (HT_IS_PACKED(ht)) {
 		ADD_SIZE(HT_PACKED_USED_SIZE(ht));
-	} else if (ht->nNumUsed > HT_MIN_SIZE && ht->nNumUsed < (uint32_t)(-(int32_t)ht->nTableMask) / 4) {
+	} else if (ht->nNumUsed > HT_MIN_SIZE_UNPACKED && ht->nNumUsed < (uint32_t)(-(int32_t)ht->nTableMask) / 4) {
 		/* compact table */
 		uint32_t hash_size;
 

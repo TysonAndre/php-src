@@ -108,7 +108,7 @@ ZEND_API void *zend_hash_find_ptr_lc(const HashTable *ht, zend_string *key) {
 
 static void ZEND_FASTCALL zend_hash_do_resize(HashTable *ht);
 
-static zend_always_inline uint32_t zend_hash_check_size(uint32_t nSize)
+static zend_always_inline uint32_t zend_hash_check_size(uint32_t nSize, uint32_t minSize)
 {
 #ifdef ZEND_WIN32
 	unsigned long index;
@@ -116,8 +116,8 @@ static zend_always_inline uint32_t zend_hash_check_size(uint32_t nSize)
 
 	/* Use big enough power of 2 */
 	/* size should be between HT_MIN_SIZE and HT_MAX_SIZE */
-	if (nSize <= HT_MIN_SIZE) {
-		return HT_MIN_SIZE;
+	if (nSize <= minSize) {
+		return minSize;
 	} else if (UNEXPECTED(nSize >= HT_MAX_SIZE)) {
 		zend_error_noreturn(E_ERROR, "Possible integer overflow in memory allocation (%u * %zu + %zu)", nSize, sizeof(Bucket), sizeof(Bucket));
 	}
@@ -149,7 +149,7 @@ static zend_always_inline void zend_hash_real_init_packed_ex(HashTable *ht)
 
 	if (UNEXPECTED(GC_FLAGS(ht) & IS_ARRAY_PERSISTENT)) {
 		data = pemalloc(HT_PACKED_SIZE_EX(ht->nTableSize, HT_MIN_MASK), 1);
-	} else if (EXPECTED(ht->nTableSize == HT_MIN_SIZE)) {
+	} else if (ht->nTableSize <= HT_MIN_SIZE) {
 		/* Use specialized API with constant allocation amount for a particularly common case. */
 		data = emalloc(HT_PACKED_SIZE_EX(HT_MIN_SIZE, HT_MIN_MASK));
 	} else {
@@ -164,13 +164,17 @@ static zend_always_inline void zend_hash_real_init_packed_ex(HashTable *ht)
 static zend_always_inline void zend_hash_real_init_mixed_ex(HashTable *ht)
 {
 	void *data;
-	uint32_t nSize = ht->nTableSize;
+	uint32_t nSize;
 
 	if (UNEXPECTED(GC_FLAGS(ht) & IS_ARRAY_PERSISTENT)) {
+		nSize = zend_hash_check_size(ht->nTableSize, HT_MIN_SIZE_UNPACKED);
+		ht->nTableSize = nSize;
 		data = pemalloc(HT_SIZE_EX(nSize, HT_SIZE_TO_MASK(nSize)), 1);
-	} else if (EXPECTED(nSize == HT_MIN_SIZE)) {
-		data = emalloc(HT_SIZE_EX(HT_MIN_SIZE, HT_SIZE_TO_MASK(HT_MIN_SIZE)));
-		ht->nTableMask = HT_SIZE_TO_MASK(HT_MIN_SIZE);
+	} else if (EXPECTED(ht->nTableSize <= HT_MIN_SIZE_UNPACKED)) {
+		nSize = HT_MIN_SIZE_UNPACKED;
+		ht->nTableSize = nSize;
+		data = emalloc(HT_SIZE_EX(HT_MIN_SIZE_UNPACKED, HT_SIZE_TO_MASK(HT_MIN_SIZE_UNPACKED)));
+		ht->nTableMask = HT_SIZE_TO_MASK(HT_MIN_SIZE_UNPACKED);
 		HT_SET_DATA_ADDR(ht, data);
 		/* Don't overwrite iterator count. */
 		ht->u.v.flags = HASH_FLAG_STATIC_KEYS;
@@ -211,6 +215,8 @@ static zend_always_inline void zend_hash_real_init_mixed_ex(HashTable *ht)
 #endif
 		return;
 	} else {
+		nSize = zend_hash_check_size(ht->nTableSize, HT_MIN_SIZE_UNPACKED);
+		ht->nTableSize = nSize;
 		data = emalloc(HT_SIZE_EX(nSize, HT_SIZE_TO_MASK(nSize)));
 	}
 	ht->nTableMask = HT_SIZE_TO_MASK(nSize);
@@ -233,6 +239,7 @@ static zend_always_inline void zend_hash_real_init_ex(HashTable *ht, bool packed
 static const uint32_t uninitialized_bucket[-HT_MIN_MASK] =
 	{HT_INVALID_IDX, HT_INVALID_IDX};
 
+/* XXX: Is MIN_SIZE_UNPACKED the best choice vs this (8 vs 2)? Haven't benchmarked it. This would affect copy on writes for appending to the empty array. */
 ZEND_API const HashTable zend_empty_array = {
 	.gc.refcount = 2,
 	.gc.u.type_info = IS_ARRAY | (GC_IMMUTABLE << GC_FLAGS_SHIFT),
@@ -259,7 +266,8 @@ static zend_always_inline void _zend_hash_init_int(HashTable *ht, uint32_t nSize
 	ht->nInternalPointer = 0;
 	ht->nNextFreeElement = ZEND_LONG_MIN;
 	ht->pDestructor = pDestructor;
-	ht->nTableSize = zend_hash_check_size(nSize);
+	/* Choose a size of at least 2. */
+	ht->nTableSize = MAX(nSize, HT_MIN_SIZE);
 }
 
 ZEND_API void ZEND_FASTCALL _zend_hash_init(HashTable *ht, uint32_t nSize, dtor_func_t pDestructor, bool persistent)
@@ -274,6 +282,13 @@ ZEND_API HashTable* ZEND_FASTCALL _zend_new_array_0(void)
 	return ht;
 }
 
+ZEND_API HashTable* ZEND_FASTCALL _zend_new_array_assoc_0(void)
+{
+	HashTable *ht = emalloc(sizeof(HashTable));
+	_zend_hash_init_int(ht, HT_MIN_SIZE_UNPACKED, ZVAL_PTR_DTOR, 0);
+	return ht;
+}
+
 ZEND_API HashTable* ZEND_FASTCALL _zend_new_array(uint32_t nSize)
 {
 	HashTable *ht = emalloc(sizeof(HashTable));
@@ -281,10 +296,18 @@ ZEND_API HashTable* ZEND_FASTCALL _zend_new_array(uint32_t nSize)
 	return ht;
 }
 
+ZEND_API HashTable* ZEND_FASTCALL _zend_new_array_assoc(uint32_t nSize)
+{
+	HashTable *ht = emalloc(sizeof(HashTable));
+	_zend_hash_init_int(ht, nSize < HT_MIN_SIZE_UNPACKED ? HT_MIN_SIZE_UNPACKED : nSize, ZVAL_PTR_DTOR, 0);
+	return ht;
+}
+
 ZEND_API HashTable* ZEND_FASTCALL zend_new_pair(zval *val1, zval *val2)
 {
 	zval *zv;
 	HashTable *ht = emalloc(sizeof(HashTable));
+	/* XXX: Currently, HT_MIN_SIZE == 2. will need to adjust all calls like this if HT_MIN_SIZE goes below 2 */
 	_zend_hash_init_int(ht, HT_MIN_SIZE, ZVAL_PTR_DTOR, 0);
 	ht->nNumUsed = ht->nNumOfElements = ht->nNextFreeElement = 2;
 	zend_hash_real_init_packed_ex(ht);
@@ -337,11 +360,18 @@ ZEND_API void ZEND_FASTCALL zend_hash_packed_to_hash(HashTable *ht)
 	Bucket *dst;
 	uint32_t i;
 	uint32_t nSize = ht->nTableSize;
+	if (nSize < HT_MIN_SIZE_UNPACKED) {
+		nSize = HT_MIN_SIZE_UNPACKED;
+		ht->nTableSize = HT_MIN_SIZE_UNPACKED;
+	} else if (nSize & (nSize - 1)) {
+		nSize = zend_hash_check_size(nSize, HT_MIN_SIZE_UNPACKED);
+		ht->nTableSize = nSize;
+	}
 
 	HT_ASSERT_RC1(ht);
 	HT_FLAGS(ht) &= ~HASH_FLAG_PACKED;
 	new_data = pemalloc(HT_SIZE_EX(nSize, HT_SIZE_TO_MASK(nSize)), GC_FLAGS(ht) & IS_ARRAY_PERSISTENT);
-	ht->nTableMask = HT_SIZE_TO_MASK(ht->nTableSize);
+	ht->nTableMask = HT_SIZE_TO_MASK(nSize);
 	HT_SET_DATA_ADDR(ht, new_data);
 	dst = ht->arData;
 	for (i = 0; i < ht->nNumUsed; i++) {
@@ -383,14 +413,16 @@ ZEND_API void ZEND_FASTCALL zend_hash_extend(HashTable *ht, uint32_t nSize, bool
 	if (nSize == 0) return;
 	if (UNEXPECTED(HT_FLAGS(ht) & HASH_FLAG_UNINITIALIZED)) {
 		if (nSize > ht->nTableSize) {
-			ht->nTableSize = zend_hash_check_size(nSize);
+			ht->nTableSize = zend_hash_check_size(nSize, HT_MIN_SIZE_UNPACKED);
 		}
 		zend_hash_real_init(ht, packed);
 	} else {
 		if (packed) {
 			ZEND_ASSERT(HT_IS_PACKED(ht));
 			if (nSize > ht->nTableSize) {
-				ht->nTableSize = zend_hash_check_size(nSize);
+				/* Though the extended size doesn't need to be a power of 2, choose it anyway to amortize the cost of regrowing a table and for better branch prediction on considitions on size.
+				 * Choose a larger power of 2 to avoid multiple reallocations before the array grows to 8 elements. */
+				ht->nTableSize = zend_hash_check_size(nSize, HT_MIN_SIZE_UNPACKED);
 				HT_SET_DATA_ADDR(ht, perealloc2(HT_GET_DATA_ADDR(ht), HT_PACKED_SIZE_EX(ht->nTableSize, HT_MIN_MASK), HT_PACKED_USED_SIZE(ht), GC_FLAGS(ht) & IS_ARRAY_PERSISTENT));
 			}
 		} else {
@@ -398,7 +430,7 @@ ZEND_API void ZEND_FASTCALL zend_hash_extend(HashTable *ht, uint32_t nSize, bool
 			if (nSize > ht->nTableSize) {
 				void *new_data, *old_data = HT_GET_DATA_ADDR(ht);
 				Bucket *old_buckets = ht->arData;
-				nSize = zend_hash_check_size(nSize);
+				nSize = zend_hash_check_size(nSize, HT_MIN_SIZE_UNPACKED);
 				ht->nTableSize = nSize;
 				new_data = pemalloc(HT_SIZE_EX(nSize, HT_SIZE_TO_MASK(nSize)), GC_FLAGS(ht) & IS_ARRAY_PERSISTENT);
 				ht->nTableMask = HT_SIZE_TO_MASK(ht->nTableSize);
@@ -1226,14 +1258,14 @@ static void ZEND_FASTCALL zend_hash_do_resize(HashTable *ht)
 	ZEND_ASSERT(!HT_IS_PACKED(ht));
 	if (ht->nNumUsed > ht->nNumOfElements + (ht->nNumOfElements >> 5)) { /* additional term is there to amortize the cost of compaction */
 		zend_hash_rehash(ht);
-	} else if (ht->nTableSize < HT_MAX_SIZE) {	/* Let's double the table size */
+	} else if (EXPECTED(ht->nTableSize < HT_MAX_SIZE)) {	/* Let's double the table size */
 		void *new_data, *old_data = HT_GET_DATA_ADDR(ht);
 		uint32_t nSize = ht->nTableSize + ht->nTableSize;
 		Bucket *old_buckets = ht->arData;
 
 		ht->nTableSize = nSize;
 		new_data = pemalloc(HT_SIZE_EX(nSize, HT_SIZE_TO_MASK(nSize)), GC_FLAGS(ht) & IS_ARRAY_PERSISTENT);
-		ht->nTableMask = HT_SIZE_TO_MASK(ht->nTableSize);
+		ht->nTableMask = HT_SIZE_TO_MASK(nSize);
 		HT_SET_DATA_ADDR(ht, new_data);
 		memcpy(ht->arData, old_buckets, sizeof(Bucket) * ht->nNumUsed);
 		pefree(old_data, GC_FLAGS(ht) & IS_ARRAY_PERSISTENT);

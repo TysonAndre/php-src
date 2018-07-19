@@ -1276,7 +1276,7 @@ PHP_FUNCTION(time_nanosleep)
 	if (!nanosleep(&php_req, &php_rem)) {
 		RETURN_TRUE;
 	} else if (errno == EINTR) {
-		array_init(return_value);
+		array_init_size(return_value, 2);
 		add_assoc_long_ex(return_value, "seconds", sizeof("seconds")-1, php_rem.tv_sec);
 		add_assoc_long_ex(return_value, "nanoseconds", sizeof("nanoseconds")-1, php_rem.tv_nsec);
 		return;

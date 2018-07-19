@@ -123,7 +123,7 @@ static void zend_hash_persist(HashTable *ht)
 			data = zend_shared_memdup_free(data, HT_PACKED_USED_SIZE(ht));
 		}
 		HT_SET_DATA_ADDR(ht, data);
-	} else if (ht->nNumUsed > HT_MIN_SIZE && ht->nNumUsed < (uint32_t)(-(int32_t)ht->nTableMask) / 4) {
+	} else if (ht->nNumUsed > HT_MIN_SIZE_UNPACKED && ht->nNumUsed < (uint32_t)(-(int32_t)ht->nTableMask) / 4) {
 		/* compact table */
 		void *old_data = HT_GET_DATA_ADDR(ht);
 		Bucket *old_buckets = ht->arData;

@@ -6502,7 +6502,7 @@ static int zend_jit_assign_dim(dasm_State **Dst, const zend_op *opline, uint32_t
 		if (Z_REG(op1_addr) != ZREG_FP) {
 			|	mov T1, Ra(Z_REG(op1_addr)) // save
 		}
-		|	EXT_CALL _zend_new_array_0, r0
+		|	EXT_CALL _zend_new_array_assoc_0, r0
 		if (Z_REG(op1_addr) != ZREG_FP) {
 			|	mov Ra(Z_REG(op1_addr)), T1 // restore
 		}
@@ -6582,7 +6582,7 @@ static int zend_jit_assign_dim(dasm_State **Dst, const zend_op *opline, uint32_t
 			if (Z_REG(op1_addr) != ZREG_FP) {
 				|	mov T1, Ra(Z_REG(op1_addr)) // save
 			}
-			|	EXT_CALL _zend_new_array_0, r0
+			|	EXT_CALL _zend_new_array_assoc_0, r0
 			if (Z_REG(op1_addr) != ZREG_FP) {
 				|	mov Ra(Z_REG(op1_addr)), T1 // restore
 			}
@@ -6728,7 +6728,7 @@ static int zend_jit_assign_dim_op(dasm_State **Dst, const zend_op *opline, uint3
 			|1:
 		}
 		|	// ZVAL_ARR(container, zend_new_array(8));
-		|	EXT_CALL _zend_new_array_0, r0
+		|	EXT_CALL _zend_new_array_assoc_0, r0
 		if (Z_REG(op1_addr) != ZREG_FP) {
 			|	mov Ra(Z_REG(op1_addr)), T1 // restore
 		}
@@ -12143,7 +12143,7 @@ static int zend_jit_fetch_dim(dasm_State    **Dst,
 			|1:
 		}
 		|	// ZVAL_ARR(container, zend_new_array(8));
-		|	EXT_CALL _zend_new_array_0, r0
+		|	EXT_CALL _zend_new_array_assoc_0, r0
 		if (Z_REG(op1_addr) != ZREG_FP) {
 			|	mov Ra(Z_REG(op1_addr)), T1 // restore
 		}
