@@ -225,9 +225,6 @@ struct _zend_executor_globals {
 	HashTableIterator  ht_iterators_slots[16];
 
 	void *saved_fpu_cw_ptr;
-#if XPFPA_HAVE_CW
-	XPFPA_CW_DATATYPE saved_fpu_cw;
-#endif
 
 	zend_function trampoline;
 	zend_op       call_trampoline_op;
