@@ -37,6 +37,8 @@
 
 #define LONG_SIGN_MASK (((zend_long)1) << (8*sizeof(zend_long)-1))
 
+#undef HAVE_ASM_GOTO
+
 BEGIN_EXTERN_C()
 ZEND_API int ZEND_FASTCALL add_function(zval *result, zval *op1, zval *op2);
 ZEND_API int ZEND_FASTCALL sub_function(zval *result, zval *op1, zval *op2);
