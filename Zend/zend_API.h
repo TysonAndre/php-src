@@ -1378,7 +1378,7 @@ ZEND_API ZEND_COLD void ZEND_FASTCALL zend_wrong_callback_error(int num, char *e
 	Z_PARAM_ZVAL_EX(dest, 0, 0)
 
 /* old "+" and "*" */
-#define Z_PARAM_VARIADIC_EX(spec, dest, dest_num, post_varargs) do { \
+#define Z_PARAM_VARIADIC_EX(spec, dest, dest_num, post_varargs) \
     DO_Z_PARAM_VARIADIC_EX(spec, dest, dest_num, post_varargs);
 
 #define Z_PARAM_VARIADIC(spec, dest, dest_num) \
