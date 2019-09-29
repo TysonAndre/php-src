@@ -451,7 +451,7 @@ static int zend_ast_add_unpacked_element(zval *result, zval *expr) {
 		HashTable *ht = Z_ARRVAL_P(expr);
 		zval *val;
 		zend_string *key;
-		
+
 		ZEND_HASH_FOREACH_STR_KEY_VAL(ht, key, val) {
 			if (key) {
 				zend_throw_error(NULL, "Cannot unpack array with string keys");
@@ -661,13 +661,15 @@ ZEND_API int ZEND_FASTCALL zend_ast_evaluate(zval *result, zend_ast *ast, zend_c
 			{
 				uint32_t i;
 				zend_ast_list *list = zend_ast_get_list(ast);
+				uint32_t n_children = list->children;
 
-				if (!list->children) {
+				if (!n_children) {
 					ZVAL_EMPTY_ARRAY(result);
 					break;
 				}
-				array_init(result);
-				for (i = 0; i < list->children; i++) {
+				/** Usually, there won't be an AST_UNPACK or duplicate keys. Assume that's the initial capacity. */
+				array_init_size(result, n_children);
+				for (i = 0; i < n_children; i++) {
 					zend_ast *elem = list->child[i];
 					if (elem->kind == ZEND_AST_UNPACK) {
 						if (UNEXPECTED(zend_ast_evaluate(&op1, elem->child[0], scope) != SUCCESS)) {
