@@ -1167,7 +1167,7 @@ static void ZEND_FASTCALL zend_hash_do_resize(HashTable *ht)
 
 	if (ht->nNumUsed > ht->nNumOfElements + (ht->nNumOfElements >> 5)) { /* additional term is there to amortize the cost of compaction */
 		zend_hash_rehash(ht);
-	} else if (ht->nTableSize < HT_MAX_SIZE) {	/* Let's double the table size */
+	} else if (EXPECTED(ht->nTableSize < HT_MAX_SIZE)) {	/* Let's double the table size */
 		void *new_data, *old_data = HT_GET_DATA_ADDR(ht);
 		uint32_t nSize = ht->nTableSize + ht->nTableSize;
 		if (nSize < HT_MIN_SIZE_UNPACKED) {
