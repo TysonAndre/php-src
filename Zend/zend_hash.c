@@ -345,6 +345,9 @@ ZEND_API void ZEND_FASTCALL zend_hash_packed_to_hash(HashTable *ht)
 	if (nSize < HT_MIN_SIZE_UNPACKED) {
 		nSize = HT_MIN_SIZE_UNPACKED;
 		ht->nTableSize = HT_MIN_SIZE_UNPACKED;
+	} else if (nSize & (nSize - 1)) {
+		nSize = zend_hash_check_size(nSize);
+		ht->nTableSize = nSize;
 	}
 
 	HT_ASSERT_RC1(ht);
