@@ -1191,7 +1191,7 @@ static void ZEND_FASTCALL zend_hash_do_resize(HashTable *ht)
 
 		ht->nTableSize = nSize;
 		new_data = pemalloc(HT_SIZE_EX(nSize, HT_SIZE_TO_MASK(nSize)), GC_FLAGS(ht) & IS_ARRAY_PERSISTENT);
-		ht->nTableMask = HT_SIZE_TO_MASK(ht->nTableSize);
+		ht->nTableMask = HT_SIZE_TO_MASK(nSize);
 		HT_SET_DATA_ADDR(ht, new_data);
 		memcpy(ht->arData, old_buckets, sizeof(Bucket) * ht->nNumUsed);
 		pefree(old_data, GC_FLAGS(ht) & IS_ARRAY_PERSISTENT);
