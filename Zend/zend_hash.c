@@ -246,7 +246,7 @@ static zend_always_inline void _zend_hash_init_int(HashTable *ht, uint32_t nSize
 	ht->nNextFreeElement = ZEND_LONG_MIN;
 	ht->pDestructor = pDestructor;
 	/* TODO: Decide on the best way to specify the size of a packed table exactly? This is a first attempt*/
-	ht->nTableSize = nSize <= HT_MIN_SIZE_UNPACKED ? nSize : zend_hash_check_size(nSize);
+	ht->nTableSize = (nSize <= HT_MIN_SIZE_UNPACKED ? (nSize < HT_MIN_SIZE ? HT_MIN_SIZE : nSize) : zend_hash_check_size(nSize));
 }
 
 ZEND_API void ZEND_FASTCALL _zend_hash_init(HashTable *ht, uint32_t nSize, dtor_func_t pDestructor, zend_bool persistent)
