@@ -331,7 +331,7 @@ struct _zend_array {
 	HT_HASH_EX((ht)->arData, idx)
 
 #define HT_SIZE_TO_MASK(nTableSize) \
-	(nTableSize <= 8 ? ((uint32_t)(-16)) : (uint32_t)(-((nTableSize) + (nTableSize))))
+	(uint32_t)(-(zend_hash_check_size((nTableSize) + (nTableSize))))
 #define HT_HASH_SIZE(nTableMask) \
 	(((size_t)(uint32_t)-(int32_t)(nTableMask)) * sizeof(uint32_t))
 #define HT_DATA_SIZE(nTableSize) \
@@ -348,7 +348,15 @@ struct _zend_array {
 		size_t size = HT_HASH_SIZE((ht)->nTableMask); \
 		__m128i xmm0 = _mm_setzero_si128(); \
 		xmm0 = _mm_cmpeq_epi8(xmm0, xmm0); \
-		ZEND_ASSERT(size >= 64 && ((size & 0x3f) == 0)); \
+		if (size < 64) { \
+			ZEND_ASSERT(size == 16 || size == 32); \
+			_mm_storeu_si128((__m128i*)p, xmm0); \
+			if (size >= 32) { \
+				_mm_storeu_si128((__m128i*)(p+16), xmm0); \
+			} \
+			break; \
+		} \
+		ZEND_ASSERT(((size & 0x3f) == 0)); \
 		do { \
 			_mm_storeu_si128((__m128i*)p, xmm0); \
 			_mm_storeu_si128((__m128i*)(p+16), xmm0); \
