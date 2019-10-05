@@ -6,5 +6,5 @@
 --enable-zts \
 --disable-all
 
-make "-j${MAKE_JOBS}"
+make -j8
 make install
