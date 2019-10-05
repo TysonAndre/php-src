@@ -6,5 +6,5 @@
 --enable-zts \
 --disable-all
 
-make "-j${MAKE_JOBS}" $MAKE_QUIET > "$MAKE_LOG_FILE"
-make install >> "$MAKE_LOG_FILE"
+make "-j${MAKE_JOBS}"
+make install
