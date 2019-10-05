@@ -245,7 +245,7 @@ static zend_always_inline void _zend_hash_init_int(HashTable *ht, uint32_t nSize
 	ht->nInternalPointer = 0;
 	ht->nNextFreeElement = ZEND_LONG_MIN;
 	ht->pDestructor = pDestructor;
-	/* TODO: Decide on the best way to specify the size of a packed table exactly? Currently, send_hash_check_size rounds up to the nearest power of 2. */
+	/* TODO: Decide on the best way to specify the size of a packed table exactly? This is a first attempt*/
 	ht->nTableSize = nSize <= HT_MIN_SIZE_UNPACKED ? nSize : zend_hash_check_size(nSize);
 }
 
@@ -261,10 +261,24 @@ ZEND_API HashTable* ZEND_FASTCALL _zend_new_array_0(void)
 	return ht;
 }
 
+ZEND_API HashTable* ZEND_FASTCALL _zend_new_array_assoc_0(void)
+{
+	HashTable *ht = emalloc(sizeof(HashTable));
+	_zend_hash_init_int(ht, HT_MIN_SIZE_UNPACKED, ZVAL_PTR_DTOR, 0);
+	return ht;
+}
+
 ZEND_API HashTable* ZEND_FASTCALL _zend_new_array(uint32_t nSize)
 {
 	HashTable *ht = emalloc(sizeof(HashTable));
 	_zend_hash_init_int(ht, nSize, ZVAL_PTR_DTOR, 0);
+	return ht;
+}
+
+ZEND_API HashTable* ZEND_FASTCALL _zend_new_array_assoc(uint32_t nSize)
+{
+	HashTable *ht = emalloc(sizeof(HashTable));
+	_zend_hash_init_int(ht, nSize < HT_MIN_SIZE_UNPACKED ? HT_MIN_SIZE_UNPACKED : nSize, ZVAL_PTR_DTOR, 0);
 	return ht;
 }
 

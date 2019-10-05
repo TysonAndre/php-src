@@ -1567,7 +1567,7 @@ ZEND_VM_HELPER(zend_pre_dec_helper, VAR|CV, ANY)
 
 	SAVE_OPLINE();
 	if (OP1_TYPE == IS_CV && UNEXPECTED(Z_TYPE_P(var_ptr) == IS_UNDEF)) {
-		ZVAL_NULL(var_ptr);		
+		ZVAL_NULL(var_ptr);
 		ZVAL_UNDEFINED_OP1();
 	}
 
@@ -2323,7 +2323,7 @@ ZEND_VM_C_LABEL(fetch_obj_is_fast_copy):
 		}
 
 		retval = zobj->handlers->read_property(zobj, name, BP_VAR_IS, cache_slot, EX_VAR(opline->result.var));
- 
+
 		if (OP2_TYPE != IS_CONST) {
 			zend_tmp_string_release(tmp_name);
 		}
@@ -5669,10 +5669,10 @@ ZEND_VM_HANDLER(147, ZEND_ADD_ARRAY_UNPACK, ANY, ANY)
 {
 	USE_OPLINE
 	zval *op1;
-	
+
 	SAVE_OPLINE();
 	op1 = GET_OP1_ZVAL_PTR(BP_VAR_R);
-	
+
 ZEND_VM_C_LABEL(add_unpack_again):
 	if (EXPECTED(Z_TYPE_P(op1) == IS_ARRAY)) {
 		HashTable *ht = Z_ARRVAL_P(op1);
@@ -5713,11 +5713,11 @@ ZEND_VM_C_LABEL(add_unpack_again):
 				}
 				HANDLE_EXCEPTION();
 			}
-			
+
 			if (iter->funcs->rewind) {
 				iter->funcs->rewind(iter);
 			}
-			
+
 			for (; iter->funcs->valid(iter) == SUCCESS; ) {
 				zval *val;
 
@@ -5766,7 +5766,7 @@ ZEND_VM_C_LABEL(add_unpack_again):
 	} else {
 		zend_throw_error(NULL, "Only arrays and Traversables can be unpacked");
 	}
-	
+
 	FREE_OP1();
 	ZEND_VM_NEXT_OPCODE_CHECK_EXCEPTION();
 }
@@ -5871,7 +5871,7 @@ ZEND_VM_COLD_CONST_HANDLER(51, ZEND_CAST, CONST|TMP|VAR|CV, ANY, TYPE)
 					}
 					Z_OBJ_P(result)->properties = ht;
 				} else if (Z_TYPE_P(expr) != IS_NULL) {
-					Z_OBJ_P(result)->properties = ht = zend_new_array(1);
+					Z_OBJ_P(result)->properties = ht = zend_new_array_assoc(1);
 					expr = zend_hash_add_new(ht, ZSTR_KNOWN(ZEND_STR_SCALAR), expr);
 					if (OP1_TYPE == IS_CONST) {
 						if (UNEXPECTED(Z_OPT_REFCOUNTED_P(expr))) Z_ADDREF_P(expr);

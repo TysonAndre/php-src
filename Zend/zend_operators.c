@@ -633,7 +633,7 @@ try_again:
 				} else {
 					zval_ptr_dtor(op);
 					/*ZVAL_EMPTY_ARRAY(op);*/
-					array_init(op);
+					array_init_assoc(op);
 				}
 			}
 			break;
