@@ -342,12 +342,15 @@ ZEND_API void ZEND_FASTCALL zend_hash_packed_to_hash(HashTable *ht)
 	void *new_data, *old_data = HT_GET_DATA_ADDR(ht);
 	Bucket *old_buckets = ht->arData;
 	uint32_t nSize = ht->nTableSize;
-	uint32_t nNewSize = nSize >= HT_MIN_SIZE_UNPACKED ? nSize : HT_MIN_SIZE_UNPACKED;
+	if (nSize < HT_MIN_SIZE_UNPACKED) {
+		nSize = HT_MIN_SIZE_UNPACKED;
+		ht->nTableSize = HT_MIN_SIZE_UNPACKED;
+	}
 
 	HT_ASSERT_RC1(ht);
 	HT_FLAGS(ht) &= ~HASH_FLAG_PACKED;
-	new_data = pemalloc(HT_SIZE_EX(nNewSize, HT_SIZE_TO_MASK(nNewSize)), GC_FLAGS(ht) & IS_ARRAY_PERSISTENT);
-	ht->nTableMask = HT_SIZE_TO_MASK(nNewSize);
+	new_data = pemalloc(HT_SIZE_EX(nSize, HT_SIZE_TO_MASK(nSize)), GC_FLAGS(ht) & IS_ARRAY_PERSISTENT);
+	ht->nTableMask = HT_SIZE_TO_MASK(nSize);
 	HT_SET_DATA_ADDR(ht, new_data);
 	memcpy(ht->arData, old_buckets, sizeof(Bucket) * ht->nNumUsed);
 	pefree(old_data, GC_FLAGS(ht) & IS_ARRAY_PERSISTENT);
