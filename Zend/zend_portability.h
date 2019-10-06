@@ -115,11 +115,7 @@
 # define EMPTY_SWITCH_DEFAULT_CASE() default: ZEND_ASSUME(0); break;
 #endif
 
-#if defined(__GNUC__) && __GNUC__ >= 4
-# define ZEND_IGNORE_VALUE(x) (({ __typeof__ (x) __x = (x); (void) __x; }))
-#else
 # define ZEND_IGNORE_VALUE(x) ((void) (x))
-#endif
 
 #define zend_quiet_write(...) ZEND_IGNORE_VALUE(write(__VA_ARGS__))
 
