@@ -96,7 +96,7 @@ static void add_token(zval *return_value, int token_type,
 		unsigned char *text, size_t leng, int lineno) {
 	if (token_type >= 256) {
 		zval keyword;
-		array_init(&keyword);
+		array_init_size(&keyword, 3);
 		add_next_index_long(&keyword, token_type);
 		if (leng == 1) {
 			add_next_index_str(&keyword, ZSTR_CHAR(text[0]));
