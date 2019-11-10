@@ -2118,6 +2118,35 @@ ZEND_API zend_bool ZEND_FASTCALL zend_is_identical(zval *op1, zval *op2) /* {{{ 
 }
 /* }}} */
 
+/* {{{ _zend_is_identical_same_type(op1, op2) : Should only be used through helpers in Zend_operators.h  */
+/* The implementation of this is identical to zend_is_identical, except that check for the same type is left out for performance */
+ZEND_API zend_bool ZEND_FASTCALL _zend_is_identical_same_type(zval *op1, zval *op2)
+{
+	ZEND_ASSERT(Z_TYPE_P(op1) == Z_TYPE_P(op2));
+	switch (Z_TYPE_P(op1)) {
+		case IS_NULL:
+		case IS_FALSE:
+		case IS_TRUE:
+			return 1;
+		case IS_LONG:
+			return (Z_LVAL_P(op1) == Z_LVAL_P(op2));
+		case IS_RESOURCE:
+			return (Z_RES_P(op1) == Z_RES_P(op2));
+		case IS_DOUBLE:
+			return (Z_DVAL_P(op1) == Z_DVAL_P(op2));
+		case IS_STRING:
+			return zend_string_equals(Z_STR_P(op1), Z_STR_P(op2));
+		case IS_ARRAY:
+			return (Z_ARRVAL_P(op1) == Z_ARRVAL_P(op2) ||
+				zend_hash_compare(Z_ARRVAL_P(op1), Z_ARRVAL_P(op2), (compare_func_t) hash_zval_identical_function, 1) == 0);
+		case IS_OBJECT:
+			return (Z_OBJ_P(op1) == Z_OBJ_P(op2));
+		default:
+			return 0;
+	}
+}
+/* }}} */
+
 ZEND_API int ZEND_FASTCALL is_identical_function(zval *result, zval *op1, zval *op2) /* {{{ */
 {
 	ZVAL_BOOL(result, zend_is_identical(op1, op2));

@@ -55,6 +55,8 @@ ZEND_API int ZEND_FASTCALL shift_right_function(zval *result, zval *op1, zval *o
 ZEND_API int ZEND_FASTCALL concat_function(zval *result, zval *op1, zval *op2);
 
 ZEND_API zend_bool ZEND_FASTCALL zend_is_identical(zval *op1, zval *op2);
+/* _zend_is_identical_same_type should only be used through helpers implemented in zend_operators.h! */
+ZEND_API zend_bool ZEND_FASTCALL _zend_is_identical_same_type(zval *op1, zval *op2);
 
 ZEND_API int ZEND_FASTCALL is_equal_function(zval *result, zval *op1, zval *op2);
 ZEND_API int ZEND_FASTCALL is_identical_function(zval *result, zval *op1, zval *op2);
@@ -900,7 +902,7 @@ static zend_always_inline zend_bool fast_is_identical_function(zval *op1, zval *
 	} else if (Z_TYPE_P(op1) <= IS_TRUE) {
 		return 1;
 	}
-	return zend_is_identical(op1, op2);
+	return _zend_is_identical_same_type(op1, op2);
 }
 
 static zend_always_inline zend_bool fast_is_not_identical_function(zval *op1, zval *op2)
@@ -910,7 +912,7 @@ static zend_always_inline zend_bool fast_is_not_identical_function(zval *op1, zv
 	} else if (Z_TYPE_P(op1) <= IS_TRUE) {
 		return 0;
 	}
-	return !zend_is_identical(op1, op2);
+	return !_zend_is_identical_same_type(op1, op2);
 }
 
 #define ZEND_TRY_BINARY_OP1_OBJECT_OPERATION(opcode, binary_op)                                            \
