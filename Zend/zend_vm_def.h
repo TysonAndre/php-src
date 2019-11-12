@@ -487,10 +487,10 @@ ZEND_VM_C_LABEL(compare_values_any_type):
 ZEND_VM_C_LABEL(compare_values):
 	if (Z_TYPE_P(op1) <= IS_TRUE) {
 		/* They are identical, return true */
-		/* This has to check for undefined variable errors when IS_NULL is possible. */
+		/* This has to check for undefined variable errors when IS_UNDEF is possible. (only warns for IS_CV) */
 		FREE_OP1();
 		FREE_OP2();
-		ZEND_VM_SMART_BRANCH(1, 1);
+		ZEND_VM_SMART_BRANCH(1, ((OP1_TYPE & IS_CV) || (OP2_TYPE & IS_CV)));
 		return;
 	}
 	switch (Z_TYPE_P(op1)) {
@@ -522,6 +522,10 @@ ZEND_VM_C_LABEL(free_nothrow):
 			/* Both are references  */
 			op1 = Z_REFVAL_P(op1);
 			op2 = Z_REFVAL_P(op2);
+			ZEND_VM_C_GOTO(compare_values_any_type);
+		case IS_INDIRECT:
+			op1 = Z_INDIRECT_P(op1);
+			op2 = Z_INDIRECT_P(op2);
 			ZEND_VM_C_GOTO(compare_values_any_type);
 		default:
 			result = 1;
@@ -578,10 +582,10 @@ ZEND_VM_C_LABEL(compare_values_any_type):
 ZEND_VM_C_LABEL(compare_values):
 	if (Z_TYPE_P(op1) <= IS_TRUE) {
 		/* They are identical, return false. */
-		/* This has to check for undefined variable errors when IS_UNDEF is possible. */
+		/* This has to check for undefined variable errors when IS_UNDEF is possible. (only warns for IS_CV) */
 		FREE_OP1();
 		FREE_OP2();
-		ZEND_VM_SMART_BRANCH(0, 1);
+		ZEND_VM_SMART_BRANCH(0, ((OP1_TYPE & IS_CV) || (OP2_TYPE & IS_CV)));
 		return;
 	}
 	switch (Z_TYPE_P(op1)) {
@@ -613,6 +617,10 @@ ZEND_VM_C_LABEL(free_nothrow):
 			/* Both are references  */
 			op1 = Z_REFVAL_P(op1);
 			op2 = Z_REFVAL_P(op2);
+			ZEND_VM_C_GOTO(compare_values_any_type);
+		case IS_INDIRECT:
+			op1 = Z_INDIRECT_P(op1);
+			op2 = Z_INDIRECT_P(op2);
 			ZEND_VM_C_GOTO(compare_values_any_type);
 		default:
 			result = 1;

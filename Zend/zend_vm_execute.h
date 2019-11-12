@@ -4799,10 +4799,10 @@ compare_values_any_type:
 compare_values:
 	if (Z_TYPE_P(op1) <= IS_TRUE) {
 		/* They are identical, return true */
-		/* This has to check for undefined variable errors when IS_NULL is possible. */
+		/* This has to check for undefined variable errors when IS_UNDEF is possible. (only warns for IS_CV) */
 
 
-		ZEND_VM_SMART_BRANCH(1, 1);
+		ZEND_VM_SMART_BRANCH(1, ((IS_CONST & IS_CV) || (IS_CONST & IS_CV)));
 		return;
 	}
 	switch (Z_TYPE_P(op1)) {
@@ -4834,6 +4834,10 @@ free_nothrow:
 			/* Both are references  */
 			op1 = Z_REFVAL_P(op1);
 			op2 = Z_REFVAL_P(op2);
+			goto compare_values_any_type;
+		case IS_INDIRECT:
+			op1 = Z_INDIRECT_P(op1);
+			op2 = Z_INDIRECT_P(op2);
 			goto compare_values_any_type;
 		default:
 			result = 1;
@@ -4890,10 +4894,10 @@ compare_values_any_type:
 compare_values:
 	if (Z_TYPE_P(op1) <= IS_TRUE) {
 		/* They are identical, return false. */
-		/* This has to check for undefined variable errors when IS_UNDEF is possible. */
+		/* This has to check for undefined variable errors when IS_UNDEF is possible. (only warns for IS_CV) */
 
 
-		ZEND_VM_SMART_BRANCH(0, 1);
+		ZEND_VM_SMART_BRANCH(0, ((IS_CONST & IS_CV) || (IS_CONST & IS_CV)));
 		return;
 	}
 	switch (Z_TYPE_P(op1)) {
@@ -4925,6 +4929,10 @@ free_nothrow:
 			/* Both are references  */
 			op1 = Z_REFVAL_P(op1);
 			op2 = Z_REFVAL_P(op2);
+			goto compare_values_any_type;
+		case IS_INDIRECT:
+			op1 = Z_INDIRECT_P(op1);
+			op2 = Z_INDIRECT_P(op2);
 			goto compare_values_any_type;
 		default:
 			result = 1;
@@ -17987,10 +17995,10 @@ compare_values_any_type:
 compare_values:
 	if (Z_TYPE_P(op1) <= IS_TRUE) {
 		/* They are identical, return true */
-		/* This has to check for undefined variable errors when IS_NULL is possible. */
+		/* This has to check for undefined variable errors when IS_UNDEF is possible. (only warns for IS_CV) */
 		zval_ptr_dtor_nogc(EX_VAR(opline->op1.var));
 
-		ZEND_VM_SMART_BRANCH(1, 1);
+		ZEND_VM_SMART_BRANCH(1, ((IS_TMP_VAR & IS_CV) || (IS_CONST & IS_CV)));
 		return;
 	}
 	switch (Z_TYPE_P(op1)) {
@@ -18022,6 +18030,10 @@ free_nothrow:
 			/* Both are references  */
 			op1 = Z_REFVAL_P(op1);
 			op2 = Z_REFVAL_P(op2);
+			goto compare_values_any_type;
+		case IS_INDIRECT:
+			op1 = Z_INDIRECT_P(op1);
+			op2 = Z_INDIRECT_P(op2);
 			goto compare_values_any_type;
 		default:
 			result = 1;
@@ -18078,10 +18090,10 @@ compare_values_any_type:
 compare_values:
 	if (Z_TYPE_P(op1) <= IS_TRUE) {
 		/* They are identical, return false. */
-		/* This has to check for undefined variable errors when IS_UNDEF is possible. */
+		/* This has to check for undefined variable errors when IS_UNDEF is possible. (only warns for IS_CV) */
 		zval_ptr_dtor_nogc(EX_VAR(opline->op1.var));
 
-		ZEND_VM_SMART_BRANCH(0, 1);
+		ZEND_VM_SMART_BRANCH(0, ((IS_TMP_VAR & IS_CV) || (IS_CONST & IS_CV)));
 		return;
 	}
 	switch (Z_TYPE_P(op1)) {
@@ -18113,6 +18125,10 @@ free_nothrow:
 			/* Both are references  */
 			op1 = Z_REFVAL_P(op1);
 			op2 = Z_REFVAL_P(op2);
+			goto compare_values_any_type;
+		case IS_INDIRECT:
+			op1 = Z_INDIRECT_P(op1);
+			op2 = Z_INDIRECT_P(op2);
 			goto compare_values_any_type;
 		default:
 			result = 1;
@@ -18940,10 +18956,10 @@ compare_values_any_type:
 compare_values:
 	if (Z_TYPE_P(op1) <= IS_TRUE) {
 		/* They are identical, return true */
-		/* This has to check for undefined variable errors when IS_NULL is possible. */
+		/* This has to check for undefined variable errors when IS_UNDEF is possible. (only warns for IS_CV) */
 		zval_ptr_dtor_nogc(EX_VAR(opline->op1.var));
 		zval_ptr_dtor_nogc(EX_VAR(opline->op2.var));
-		ZEND_VM_SMART_BRANCH(1, 1);
+		ZEND_VM_SMART_BRANCH(1, ((IS_TMP_VAR & IS_CV) || (IS_TMP_VAR & IS_CV)));
 		return;
 	}
 	switch (Z_TYPE_P(op1)) {
@@ -18975,6 +18991,10 @@ free_nothrow:
 			/* Both are references  */
 			op1 = Z_REFVAL_P(op1);
 			op2 = Z_REFVAL_P(op2);
+			goto compare_values_any_type;
+		case IS_INDIRECT:
+			op1 = Z_INDIRECT_P(op1);
+			op2 = Z_INDIRECT_P(op2);
 			goto compare_values_any_type;
 		default:
 			result = 1;
@@ -19031,10 +19051,10 @@ compare_values_any_type:
 compare_values:
 	if (Z_TYPE_P(op1) <= IS_TRUE) {
 		/* They are identical, return false. */
-		/* This has to check for undefined variable errors when IS_UNDEF is possible. */
+		/* This has to check for undefined variable errors when IS_UNDEF is possible. (only warns for IS_CV) */
 		zval_ptr_dtor_nogc(EX_VAR(opline->op1.var));
 		zval_ptr_dtor_nogc(EX_VAR(opline->op2.var));
-		ZEND_VM_SMART_BRANCH(0, 1);
+		ZEND_VM_SMART_BRANCH(0, ((IS_TMP_VAR & IS_CV) || (IS_TMP_VAR & IS_CV)));
 		return;
 	}
 	switch (Z_TYPE_P(op1)) {
@@ -19066,6 +19086,10 @@ free_nothrow:
 			/* Both are references  */
 			op1 = Z_REFVAL_P(op1);
 			op2 = Z_REFVAL_P(op2);
+			goto compare_values_any_type;
+		case IS_INDIRECT:
+			op1 = Z_INDIRECT_P(op1);
+			op2 = Z_INDIRECT_P(op2);
 			goto compare_values_any_type;
 		default:
 			result = 1;
@@ -21301,10 +21325,10 @@ compare_values_any_type:
 compare_values:
 	if (Z_TYPE_P(op1) <= IS_TRUE) {
 		/* They are identical, return true */
-		/* This has to check for undefined variable errors when IS_NULL is possible. */
+		/* This has to check for undefined variable errors when IS_UNDEF is possible. (only warns for IS_CV) */
 		zval_ptr_dtor_nogc(EX_VAR(opline->op1.var));
 
-		ZEND_VM_SMART_BRANCH(1, 1);
+		ZEND_VM_SMART_BRANCH(1, ((IS_VAR & IS_CV) || (IS_CONST & IS_CV)));
 		return;
 	}
 	switch (Z_TYPE_P(op1)) {
@@ -21336,6 +21360,10 @@ free_nothrow:
 			/* Both are references  */
 			op1 = Z_REFVAL_P(op1);
 			op2 = Z_REFVAL_P(op2);
+			goto compare_values_any_type;
+		case IS_INDIRECT:
+			op1 = Z_INDIRECT_P(op1);
+			op2 = Z_INDIRECT_P(op2);
 			goto compare_values_any_type;
 		default:
 			result = 1;
@@ -21392,10 +21420,10 @@ compare_values_any_type:
 compare_values:
 	if (Z_TYPE_P(op1) <= IS_TRUE) {
 		/* They are identical, return false. */
-		/* This has to check for undefined variable errors when IS_UNDEF is possible. */
+		/* This has to check for undefined variable errors when IS_UNDEF is possible. (only warns for IS_CV) */
 		zval_ptr_dtor_nogc(EX_VAR(opline->op1.var));
 
-		ZEND_VM_SMART_BRANCH(0, 1);
+		ZEND_VM_SMART_BRANCH(0, ((IS_VAR & IS_CV) || (IS_CONST & IS_CV)));
 		return;
 	}
 	switch (Z_TYPE_P(op1)) {
@@ -21427,6 +21455,10 @@ free_nothrow:
 			/* Both are references  */
 			op1 = Z_REFVAL_P(op1);
 			op2 = Z_REFVAL_P(op2);
+			goto compare_values_any_type;
+		case IS_INDIRECT:
+			op1 = Z_INDIRECT_P(op1);
+			op2 = Z_INDIRECT_P(op2);
 			goto compare_values_any_type;
 		default:
 			result = 1;
@@ -25824,10 +25856,10 @@ compare_values_any_type:
 compare_values:
 	if (Z_TYPE_P(op1) <= IS_TRUE) {
 		/* They are identical, return true */
-		/* This has to check for undefined variable errors when IS_NULL is possible. */
+		/* This has to check for undefined variable errors when IS_UNDEF is possible. (only warns for IS_CV) */
 		zval_ptr_dtor_nogc(EX_VAR(opline->op1.var));
 		zval_ptr_dtor_nogc(EX_VAR(opline->op2.var));
-		ZEND_VM_SMART_BRANCH(1, 1);
+		ZEND_VM_SMART_BRANCH(1, ((IS_VAR & IS_CV) || (IS_TMP_VAR & IS_CV)));
 		return;
 	}
 	switch (Z_TYPE_P(op1)) {
@@ -25859,6 +25891,10 @@ free_nothrow:
 			/* Both are references  */
 			op1 = Z_REFVAL_P(op1);
 			op2 = Z_REFVAL_P(op2);
+			goto compare_values_any_type;
+		case IS_INDIRECT:
+			op1 = Z_INDIRECT_P(op1);
+			op2 = Z_INDIRECT_P(op2);
 			goto compare_values_any_type;
 		default:
 			result = 1;
@@ -25915,10 +25951,10 @@ compare_values_any_type:
 compare_values:
 	if (Z_TYPE_P(op1) <= IS_TRUE) {
 		/* They are identical, return false. */
-		/* This has to check for undefined variable errors when IS_UNDEF is possible. */
+		/* This has to check for undefined variable errors when IS_UNDEF is possible. (only warns for IS_CV) */
 		zval_ptr_dtor_nogc(EX_VAR(opline->op1.var));
 		zval_ptr_dtor_nogc(EX_VAR(opline->op2.var));
-		ZEND_VM_SMART_BRANCH(0, 1);
+		ZEND_VM_SMART_BRANCH(0, ((IS_VAR & IS_CV) || (IS_TMP_VAR & IS_CV)));
 		return;
 	}
 	switch (Z_TYPE_P(op1)) {
@@ -25950,6 +25986,10 @@ free_nothrow:
 			/* Both are references  */
 			op1 = Z_REFVAL_P(op1);
 			op2 = Z_REFVAL_P(op2);
+			goto compare_values_any_type;
+		case IS_INDIRECT:
+			op1 = Z_INDIRECT_P(op1);
+			op2 = Z_INDIRECT_P(op2);
 			goto compare_values_any_type;
 		default:
 			result = 1;
@@ -26046,10 +26086,10 @@ compare_values_any_type:
 compare_values:
 	if (Z_TYPE_P(op1) <= IS_TRUE) {
 		/* They are identical, return true */
-		/* This has to check for undefined variable errors when IS_NULL is possible. */
+		/* This has to check for undefined variable errors when IS_UNDEF is possible. (only warns for IS_CV) */
 		zval_ptr_dtor_nogc(EX_VAR(opline->op1.var));
 		zval_ptr_dtor_nogc(EX_VAR(opline->op2.var));
-		ZEND_VM_SMART_BRANCH(1, 1);
+		ZEND_VM_SMART_BRANCH(1, ((IS_VAR & IS_CV) || (IS_VAR & IS_CV)));
 		return;
 	}
 	switch (Z_TYPE_P(op1)) {
@@ -26081,6 +26121,10 @@ free_nothrow:
 			/* Both are references  */
 			op1 = Z_REFVAL_P(op1);
 			op2 = Z_REFVAL_P(op2);
+			goto compare_values_any_type;
+		case IS_INDIRECT:
+			op1 = Z_INDIRECT_P(op1);
+			op2 = Z_INDIRECT_P(op2);
 			goto compare_values_any_type;
 		default:
 			result = 1;
@@ -26137,10 +26181,10 @@ compare_values_any_type:
 compare_values:
 	if (Z_TYPE_P(op1) <= IS_TRUE) {
 		/* They are identical, return false. */
-		/* This has to check for undefined variable errors when IS_UNDEF is possible. */
+		/* This has to check for undefined variable errors when IS_UNDEF is possible. (only warns for IS_CV) */
 		zval_ptr_dtor_nogc(EX_VAR(opline->op1.var));
 		zval_ptr_dtor_nogc(EX_VAR(opline->op2.var));
-		ZEND_VM_SMART_BRANCH(0, 1);
+		ZEND_VM_SMART_BRANCH(0, ((IS_VAR & IS_CV) || (IS_VAR & IS_CV)));
 		return;
 	}
 	switch (Z_TYPE_P(op1)) {
@@ -26172,6 +26216,10 @@ free_nothrow:
 			/* Both are references  */
 			op1 = Z_REFVAL_P(op1);
 			op2 = Z_REFVAL_P(op2);
+			goto compare_values_any_type;
+		case IS_INDIRECT:
+			op1 = Z_INDIRECT_P(op1);
+			op2 = Z_INDIRECT_P(op2);
 			goto compare_values_any_type;
 		default:
 			result = 1;
@@ -37677,10 +37725,10 @@ compare_values_any_type:
 compare_values:
 	if (Z_TYPE_P(op1) <= IS_TRUE) {
 		/* They are identical, return true */
-		/* This has to check for undefined variable errors when IS_NULL is possible. */
+		/* This has to check for undefined variable errors when IS_UNDEF is possible. (only warns for IS_CV) */
 
 
-		ZEND_VM_SMART_BRANCH(1, 1);
+		ZEND_VM_SMART_BRANCH(1, ((IS_CV & IS_CV) || (IS_CONST & IS_CV)));
 		return;
 	}
 	switch (Z_TYPE_P(op1)) {
@@ -37712,6 +37760,10 @@ free_nothrow:
 			/* Both are references  */
 			op1 = Z_REFVAL_P(op1);
 			op2 = Z_REFVAL_P(op2);
+			goto compare_values_any_type;
+		case IS_INDIRECT:
+			op1 = Z_INDIRECT_P(op1);
+			op2 = Z_INDIRECT_P(op2);
 			goto compare_values_any_type;
 		default:
 			result = 1;
@@ -37768,10 +37820,10 @@ compare_values_any_type:
 compare_values:
 	if (Z_TYPE_P(op1) <= IS_TRUE) {
 		/* They are identical, return false. */
-		/* This has to check for undefined variable errors when IS_UNDEF is possible. */
+		/* This has to check for undefined variable errors when IS_UNDEF is possible. (only warns for IS_CV) */
 
 
-		ZEND_VM_SMART_BRANCH(0, 1);
+		ZEND_VM_SMART_BRANCH(0, ((IS_CV & IS_CV) || (IS_CONST & IS_CV)));
 		return;
 	}
 	switch (Z_TYPE_P(op1)) {
@@ -37803,6 +37855,10 @@ free_nothrow:
 			/* Both are references  */
 			op1 = Z_REFVAL_P(op1);
 			op2 = Z_REFVAL_P(op2);
+			goto compare_values_any_type;
+		case IS_INDIRECT:
+			op1 = Z_INDIRECT_P(op1);
+			op2 = Z_INDIRECT_P(op2);
 			goto compare_values_any_type;
 		default:
 			result = 1;
@@ -44307,10 +44363,10 @@ compare_values_any_type:
 compare_values:
 	if (Z_TYPE_P(op1) <= IS_TRUE) {
 		/* They are identical, return true */
-		/* This has to check for undefined variable errors when IS_NULL is possible. */
+		/* This has to check for undefined variable errors when IS_UNDEF is possible. (only warns for IS_CV) */
 
 		zval_ptr_dtor_nogc(EX_VAR(opline->op2.var));
-		ZEND_VM_SMART_BRANCH(1, 1);
+		ZEND_VM_SMART_BRANCH(1, ((IS_CV & IS_CV) || (IS_TMP_VAR & IS_CV)));
 		return;
 	}
 	switch (Z_TYPE_P(op1)) {
@@ -44342,6 +44398,10 @@ free_nothrow:
 			/* Both are references  */
 			op1 = Z_REFVAL_P(op1);
 			op2 = Z_REFVAL_P(op2);
+			goto compare_values_any_type;
+		case IS_INDIRECT:
+			op1 = Z_INDIRECT_P(op1);
+			op2 = Z_INDIRECT_P(op2);
 			goto compare_values_any_type;
 		default:
 			result = 1;
@@ -44398,10 +44458,10 @@ compare_values_any_type:
 compare_values:
 	if (Z_TYPE_P(op1) <= IS_TRUE) {
 		/* They are identical, return false. */
-		/* This has to check for undefined variable errors when IS_UNDEF is possible. */
+		/* This has to check for undefined variable errors when IS_UNDEF is possible. (only warns for IS_CV) */
 
 		zval_ptr_dtor_nogc(EX_VAR(opline->op2.var));
-		ZEND_VM_SMART_BRANCH(0, 1);
+		ZEND_VM_SMART_BRANCH(0, ((IS_CV & IS_CV) || (IS_TMP_VAR & IS_CV)));
 		return;
 	}
 	switch (Z_TYPE_P(op1)) {
@@ -44433,6 +44493,10 @@ free_nothrow:
 			/* Both are references  */
 			op1 = Z_REFVAL_P(op1);
 			op2 = Z_REFVAL_P(op2);
+			goto compare_values_any_type;
+		case IS_INDIRECT:
+			op1 = Z_INDIRECT_P(op1);
+			op2 = Z_INDIRECT_P(op2);
 			goto compare_values_any_type;
 		default:
 			result = 1;
@@ -44529,10 +44593,10 @@ compare_values_any_type:
 compare_values:
 	if (Z_TYPE_P(op1) <= IS_TRUE) {
 		/* They are identical, return true */
-		/* This has to check for undefined variable errors when IS_NULL is possible. */
+		/* This has to check for undefined variable errors when IS_UNDEF is possible. (only warns for IS_CV) */
 
 		zval_ptr_dtor_nogc(EX_VAR(opline->op2.var));
-		ZEND_VM_SMART_BRANCH(1, 1);
+		ZEND_VM_SMART_BRANCH(1, ((IS_CV & IS_CV) || (IS_VAR & IS_CV)));
 		return;
 	}
 	switch (Z_TYPE_P(op1)) {
@@ -44564,6 +44628,10 @@ free_nothrow:
 			/* Both are references  */
 			op1 = Z_REFVAL_P(op1);
 			op2 = Z_REFVAL_P(op2);
+			goto compare_values_any_type;
+		case IS_INDIRECT:
+			op1 = Z_INDIRECT_P(op1);
+			op2 = Z_INDIRECT_P(op2);
 			goto compare_values_any_type;
 		default:
 			result = 1;
@@ -44620,10 +44688,10 @@ compare_values_any_type:
 compare_values:
 	if (Z_TYPE_P(op1) <= IS_TRUE) {
 		/* They are identical, return false. */
-		/* This has to check for undefined variable errors when IS_UNDEF is possible. */
+		/* This has to check for undefined variable errors when IS_UNDEF is possible. (only warns for IS_CV) */
 
 		zval_ptr_dtor_nogc(EX_VAR(opline->op2.var));
-		ZEND_VM_SMART_BRANCH(0, 1);
+		ZEND_VM_SMART_BRANCH(0, ((IS_CV & IS_CV) || (IS_VAR & IS_CV)));
 		return;
 	}
 	switch (Z_TYPE_P(op1)) {
@@ -44655,6 +44723,10 @@ free_nothrow:
 			/* Both are references  */
 			op1 = Z_REFVAL_P(op1);
 			op2 = Z_REFVAL_P(op2);
+			goto compare_values_any_type;
+		case IS_INDIRECT:
+			op1 = Z_INDIRECT_P(op1);
+			op2 = Z_INDIRECT_P(op2);
 			goto compare_values_any_type;
 		default:
 			result = 1;
@@ -46336,10 +46408,10 @@ compare_values_any_type:
 compare_values:
 	if (Z_TYPE_P(op1) <= IS_TRUE) {
 		/* They are identical, return true */
-		/* This has to check for undefined variable errors when IS_NULL is possible. */
+		/* This has to check for undefined variable errors when IS_UNDEF is possible. (only warns for IS_CV) */
 
 
-		ZEND_VM_SMART_BRANCH(1, 1);
+		ZEND_VM_SMART_BRANCH(1, ((IS_CV & IS_CV) || (IS_CV & IS_CV)));
 		return;
 	}
 	switch (Z_TYPE_P(op1)) {
@@ -46371,6 +46443,10 @@ free_nothrow:
 			/* Both are references  */
 			op1 = Z_REFVAL_P(op1);
 			op2 = Z_REFVAL_P(op2);
+			goto compare_values_any_type;
+		case IS_INDIRECT:
+			op1 = Z_INDIRECT_P(op1);
+			op2 = Z_INDIRECT_P(op2);
 			goto compare_values_any_type;
 		default:
 			result = 1;
@@ -46427,10 +46503,10 @@ compare_values_any_type:
 compare_values:
 	if (Z_TYPE_P(op1) <= IS_TRUE) {
 		/* They are identical, return false. */
-		/* This has to check for undefined variable errors when IS_UNDEF is possible. */
+		/* This has to check for undefined variable errors when IS_UNDEF is possible. (only warns for IS_CV) */
 
 
-		ZEND_VM_SMART_BRANCH(0, 1);
+		ZEND_VM_SMART_BRANCH(0, ((IS_CV & IS_CV) || (IS_CV & IS_CV)));
 		return;
 	}
 	switch (Z_TYPE_P(op1)) {
@@ -46462,6 +46538,10 @@ free_nothrow:
 			/* Both are references  */
 			op1 = Z_REFVAL_P(op1);
 			op2 = Z_REFVAL_P(op2);
+			goto compare_values_any_type;
+		case IS_INDIRECT:
+			op1 = Z_INDIRECT_P(op1);
+			op2 = Z_INDIRECT_P(op2);
 			goto compare_values_any_type;
 		default:
 			result = 1;
