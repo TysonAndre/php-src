@@ -4798,11 +4798,18 @@ compare_values_any_type:
 	}
 compare_values:
 	if (Z_TYPE_P(op1) <= IS_TRUE) {
+        if (((IS_CONST & IS_CV) || (IS_CONST & IS_CV)) && UNEXPECTED(Z_TYPE_P(op1) == IS_UNDEF)) {
+            /* They are both undefined - fetch them to emit the undefined variable warnings. */
+            op1 = ZVAL_UNDEFINED_OP1();
+            op2 = ZVAL_UNDEFINED_OP2();
+            ZEND_VM_SMART_BRANCH(1, 1);
+            return;
+        }
 		/* They are identical, return true */
 		/* This has to check for undefined variable errors when IS_UNDEF is possible. (only warns for IS_CV) */
 
 
-		ZEND_VM_SMART_BRANCH(1, ((IS_CONST & IS_CV) || (IS_CONST & IS_CV)));
+		ZEND_VM_SMART_BRANCH(1, 0);
 		return;
 	}
 	switch (Z_TYPE_P(op1)) {
@@ -4893,11 +4900,18 @@ compare_values_any_type:
 	}
 compare_values:
 	if (Z_TYPE_P(op1) <= IS_TRUE) {
+        if (((IS_CONST & IS_CV) || (IS_CONST & IS_CV)) && UNEXPECTED(Z_TYPE_P(op1) == IS_UNDEF)) {
+            /* They are both undefined - fetch them to emit the undefined variable warnings. */
+            op1 = ZVAL_UNDEFINED_OP1();
+            op2 = ZVAL_UNDEFINED_OP2();
+            ZEND_VM_SMART_BRANCH(0, 1);
+            return;
+        }
 		/* They are identical, return false. */
 		/* This has to check for undefined variable errors when IS_UNDEF is possible. (only warns for IS_CV) */
 
 
-		ZEND_VM_SMART_BRANCH(0, ((IS_CONST & IS_CV) || (IS_CONST & IS_CV)));
+		ZEND_VM_SMART_BRANCH(0, 0);
 		return;
 	}
 	switch (Z_TYPE_P(op1)) {
@@ -17994,11 +18008,18 @@ compare_values_any_type:
 	}
 compare_values:
 	if (Z_TYPE_P(op1) <= IS_TRUE) {
+        if (((IS_TMP_VAR & IS_CV) || (IS_CONST & IS_CV)) && UNEXPECTED(Z_TYPE_P(op1) == IS_UNDEF)) {
+            /* They are both undefined - fetch them to emit the undefined variable warnings. */
+            op1 = ZVAL_UNDEFINED_OP1();
+            op2 = ZVAL_UNDEFINED_OP2();
+            ZEND_VM_SMART_BRANCH(1, 1);
+            return;
+        }
 		/* They are identical, return true */
 		/* This has to check for undefined variable errors when IS_UNDEF is possible. (only warns for IS_CV) */
 		zval_ptr_dtor_nogc(EX_VAR(opline->op1.var));
 
-		ZEND_VM_SMART_BRANCH(1, ((IS_TMP_VAR & IS_CV) || (IS_CONST & IS_CV)));
+		ZEND_VM_SMART_BRANCH(1, 0);
 		return;
 	}
 	switch (Z_TYPE_P(op1)) {
@@ -18089,11 +18110,18 @@ compare_values_any_type:
 	}
 compare_values:
 	if (Z_TYPE_P(op1) <= IS_TRUE) {
+        if (((IS_TMP_VAR & IS_CV) || (IS_CONST & IS_CV)) && UNEXPECTED(Z_TYPE_P(op1) == IS_UNDEF)) {
+            /* They are both undefined - fetch them to emit the undefined variable warnings. */
+            op1 = ZVAL_UNDEFINED_OP1();
+            op2 = ZVAL_UNDEFINED_OP2();
+            ZEND_VM_SMART_BRANCH(0, 1);
+            return;
+        }
 		/* They are identical, return false. */
 		/* This has to check for undefined variable errors when IS_UNDEF is possible. (only warns for IS_CV) */
 		zval_ptr_dtor_nogc(EX_VAR(opline->op1.var));
 
-		ZEND_VM_SMART_BRANCH(0, ((IS_TMP_VAR & IS_CV) || (IS_CONST & IS_CV)));
+		ZEND_VM_SMART_BRANCH(0, 0);
 		return;
 	}
 	switch (Z_TYPE_P(op1)) {
@@ -18955,11 +18983,18 @@ compare_values_any_type:
 	}
 compare_values:
 	if (Z_TYPE_P(op1) <= IS_TRUE) {
+        if (((IS_TMP_VAR & IS_CV) || (IS_TMP_VAR & IS_CV)) && UNEXPECTED(Z_TYPE_P(op1) == IS_UNDEF)) {
+            /* They are both undefined - fetch them to emit the undefined variable warnings. */
+            op1 = ZVAL_UNDEFINED_OP1();
+            op2 = ZVAL_UNDEFINED_OP2();
+            ZEND_VM_SMART_BRANCH(1, 1);
+            return;
+        }
 		/* They are identical, return true */
 		/* This has to check for undefined variable errors when IS_UNDEF is possible. (only warns for IS_CV) */
 		zval_ptr_dtor_nogc(EX_VAR(opline->op1.var));
 		zval_ptr_dtor_nogc(EX_VAR(opline->op2.var));
-		ZEND_VM_SMART_BRANCH(1, ((IS_TMP_VAR & IS_CV) || (IS_TMP_VAR & IS_CV)));
+		ZEND_VM_SMART_BRANCH(1, 0);
 		return;
 	}
 	switch (Z_TYPE_P(op1)) {
@@ -19050,11 +19085,18 @@ compare_values_any_type:
 	}
 compare_values:
 	if (Z_TYPE_P(op1) <= IS_TRUE) {
+        if (((IS_TMP_VAR & IS_CV) || (IS_TMP_VAR & IS_CV)) && UNEXPECTED(Z_TYPE_P(op1) == IS_UNDEF)) {
+            /* They are both undefined - fetch them to emit the undefined variable warnings. */
+            op1 = ZVAL_UNDEFINED_OP1();
+            op2 = ZVAL_UNDEFINED_OP2();
+            ZEND_VM_SMART_BRANCH(0, 1);
+            return;
+        }
 		/* They are identical, return false. */
 		/* This has to check for undefined variable errors when IS_UNDEF is possible. (only warns for IS_CV) */
 		zval_ptr_dtor_nogc(EX_VAR(opline->op1.var));
 		zval_ptr_dtor_nogc(EX_VAR(opline->op2.var));
-		ZEND_VM_SMART_BRANCH(0, ((IS_TMP_VAR & IS_CV) || (IS_TMP_VAR & IS_CV)));
+		ZEND_VM_SMART_BRANCH(0, 0);
 		return;
 	}
 	switch (Z_TYPE_P(op1)) {
@@ -21324,11 +21366,18 @@ compare_values_any_type:
 	}
 compare_values:
 	if (Z_TYPE_P(op1) <= IS_TRUE) {
+        if (((IS_VAR & IS_CV) || (IS_CONST & IS_CV)) && UNEXPECTED(Z_TYPE_P(op1) == IS_UNDEF)) {
+            /* They are both undefined - fetch them to emit the undefined variable warnings. */
+            op1 = ZVAL_UNDEFINED_OP1();
+            op2 = ZVAL_UNDEFINED_OP2();
+            ZEND_VM_SMART_BRANCH(1, 1);
+            return;
+        }
 		/* They are identical, return true */
 		/* This has to check for undefined variable errors when IS_UNDEF is possible. (only warns for IS_CV) */
 		zval_ptr_dtor_nogc(EX_VAR(opline->op1.var));
 
-		ZEND_VM_SMART_BRANCH(1, ((IS_VAR & IS_CV) || (IS_CONST & IS_CV)));
+		ZEND_VM_SMART_BRANCH(1, 0);
 		return;
 	}
 	switch (Z_TYPE_P(op1)) {
@@ -21419,11 +21468,18 @@ compare_values_any_type:
 	}
 compare_values:
 	if (Z_TYPE_P(op1) <= IS_TRUE) {
+        if (((IS_VAR & IS_CV) || (IS_CONST & IS_CV)) && UNEXPECTED(Z_TYPE_P(op1) == IS_UNDEF)) {
+            /* They are both undefined - fetch them to emit the undefined variable warnings. */
+            op1 = ZVAL_UNDEFINED_OP1();
+            op2 = ZVAL_UNDEFINED_OP2();
+            ZEND_VM_SMART_BRANCH(0, 1);
+            return;
+        }
 		/* They are identical, return false. */
 		/* This has to check for undefined variable errors when IS_UNDEF is possible. (only warns for IS_CV) */
 		zval_ptr_dtor_nogc(EX_VAR(opline->op1.var));
 
-		ZEND_VM_SMART_BRANCH(0, ((IS_VAR & IS_CV) || (IS_CONST & IS_CV)));
+		ZEND_VM_SMART_BRANCH(0, 0);
 		return;
 	}
 	switch (Z_TYPE_P(op1)) {
@@ -25855,11 +25911,18 @@ compare_values_any_type:
 	}
 compare_values:
 	if (Z_TYPE_P(op1) <= IS_TRUE) {
+        if (((IS_VAR & IS_CV) || (IS_TMP_VAR & IS_CV)) && UNEXPECTED(Z_TYPE_P(op1) == IS_UNDEF)) {
+            /* They are both undefined - fetch them to emit the undefined variable warnings. */
+            op1 = ZVAL_UNDEFINED_OP1();
+            op2 = ZVAL_UNDEFINED_OP2();
+            ZEND_VM_SMART_BRANCH(1, 1);
+            return;
+        }
 		/* They are identical, return true */
 		/* This has to check for undefined variable errors when IS_UNDEF is possible. (only warns for IS_CV) */
 		zval_ptr_dtor_nogc(EX_VAR(opline->op1.var));
 		zval_ptr_dtor_nogc(EX_VAR(opline->op2.var));
-		ZEND_VM_SMART_BRANCH(1, ((IS_VAR & IS_CV) || (IS_TMP_VAR & IS_CV)));
+		ZEND_VM_SMART_BRANCH(1, 0);
 		return;
 	}
 	switch (Z_TYPE_P(op1)) {
@@ -25950,11 +26013,18 @@ compare_values_any_type:
 	}
 compare_values:
 	if (Z_TYPE_P(op1) <= IS_TRUE) {
+        if (((IS_VAR & IS_CV) || (IS_TMP_VAR & IS_CV)) && UNEXPECTED(Z_TYPE_P(op1) == IS_UNDEF)) {
+            /* They are both undefined - fetch them to emit the undefined variable warnings. */
+            op1 = ZVAL_UNDEFINED_OP1();
+            op2 = ZVAL_UNDEFINED_OP2();
+            ZEND_VM_SMART_BRANCH(0, 1);
+            return;
+        }
 		/* They are identical, return false. */
 		/* This has to check for undefined variable errors when IS_UNDEF is possible. (only warns for IS_CV) */
 		zval_ptr_dtor_nogc(EX_VAR(opline->op1.var));
 		zval_ptr_dtor_nogc(EX_VAR(opline->op2.var));
-		ZEND_VM_SMART_BRANCH(0, ((IS_VAR & IS_CV) || (IS_TMP_VAR & IS_CV)));
+		ZEND_VM_SMART_BRANCH(0, 0);
 		return;
 	}
 	switch (Z_TYPE_P(op1)) {
@@ -26085,11 +26155,18 @@ compare_values_any_type:
 	}
 compare_values:
 	if (Z_TYPE_P(op1) <= IS_TRUE) {
+        if (((IS_VAR & IS_CV) || (IS_VAR & IS_CV)) && UNEXPECTED(Z_TYPE_P(op1) == IS_UNDEF)) {
+            /* They are both undefined - fetch them to emit the undefined variable warnings. */
+            op1 = ZVAL_UNDEFINED_OP1();
+            op2 = ZVAL_UNDEFINED_OP2();
+            ZEND_VM_SMART_BRANCH(1, 1);
+            return;
+        }
 		/* They are identical, return true */
 		/* This has to check for undefined variable errors when IS_UNDEF is possible. (only warns for IS_CV) */
 		zval_ptr_dtor_nogc(EX_VAR(opline->op1.var));
 		zval_ptr_dtor_nogc(EX_VAR(opline->op2.var));
-		ZEND_VM_SMART_BRANCH(1, ((IS_VAR & IS_CV) || (IS_VAR & IS_CV)));
+		ZEND_VM_SMART_BRANCH(1, 0);
 		return;
 	}
 	switch (Z_TYPE_P(op1)) {
@@ -26180,11 +26257,18 @@ compare_values_any_type:
 	}
 compare_values:
 	if (Z_TYPE_P(op1) <= IS_TRUE) {
+        if (((IS_VAR & IS_CV) || (IS_VAR & IS_CV)) && UNEXPECTED(Z_TYPE_P(op1) == IS_UNDEF)) {
+            /* They are both undefined - fetch them to emit the undefined variable warnings. */
+            op1 = ZVAL_UNDEFINED_OP1();
+            op2 = ZVAL_UNDEFINED_OP2();
+            ZEND_VM_SMART_BRANCH(0, 1);
+            return;
+        }
 		/* They are identical, return false. */
 		/* This has to check for undefined variable errors when IS_UNDEF is possible. (only warns for IS_CV) */
 		zval_ptr_dtor_nogc(EX_VAR(opline->op1.var));
 		zval_ptr_dtor_nogc(EX_VAR(opline->op2.var));
-		ZEND_VM_SMART_BRANCH(0, ((IS_VAR & IS_CV) || (IS_VAR & IS_CV)));
+		ZEND_VM_SMART_BRANCH(0, 0);
 		return;
 	}
 	switch (Z_TYPE_P(op1)) {
@@ -37724,11 +37808,18 @@ compare_values_any_type:
 	}
 compare_values:
 	if (Z_TYPE_P(op1) <= IS_TRUE) {
+        if (((IS_CV & IS_CV) || (IS_CONST & IS_CV)) && UNEXPECTED(Z_TYPE_P(op1) == IS_UNDEF)) {
+            /* They are both undefined - fetch them to emit the undefined variable warnings. */
+            op1 = ZVAL_UNDEFINED_OP1();
+            op2 = ZVAL_UNDEFINED_OP2();
+            ZEND_VM_SMART_BRANCH(1, 1);
+            return;
+        }
 		/* They are identical, return true */
 		/* This has to check for undefined variable errors when IS_UNDEF is possible. (only warns for IS_CV) */
 
 
-		ZEND_VM_SMART_BRANCH(1, ((IS_CV & IS_CV) || (IS_CONST & IS_CV)));
+		ZEND_VM_SMART_BRANCH(1, 0);
 		return;
 	}
 	switch (Z_TYPE_P(op1)) {
@@ -37819,11 +37910,18 @@ compare_values_any_type:
 	}
 compare_values:
 	if (Z_TYPE_P(op1) <= IS_TRUE) {
+        if (((IS_CV & IS_CV) || (IS_CONST & IS_CV)) && UNEXPECTED(Z_TYPE_P(op1) == IS_UNDEF)) {
+            /* They are both undefined - fetch them to emit the undefined variable warnings. */
+            op1 = ZVAL_UNDEFINED_OP1();
+            op2 = ZVAL_UNDEFINED_OP2();
+            ZEND_VM_SMART_BRANCH(0, 1);
+            return;
+        }
 		/* They are identical, return false. */
 		/* This has to check for undefined variable errors when IS_UNDEF is possible. (only warns for IS_CV) */
 
 
-		ZEND_VM_SMART_BRANCH(0, ((IS_CV & IS_CV) || (IS_CONST & IS_CV)));
+		ZEND_VM_SMART_BRANCH(0, 0);
 		return;
 	}
 	switch (Z_TYPE_P(op1)) {
@@ -44362,11 +44460,18 @@ compare_values_any_type:
 	}
 compare_values:
 	if (Z_TYPE_P(op1) <= IS_TRUE) {
+        if (((IS_CV & IS_CV) || (IS_TMP_VAR & IS_CV)) && UNEXPECTED(Z_TYPE_P(op1) == IS_UNDEF)) {
+            /* They are both undefined - fetch them to emit the undefined variable warnings. */
+            op1 = ZVAL_UNDEFINED_OP1();
+            op2 = ZVAL_UNDEFINED_OP2();
+            ZEND_VM_SMART_BRANCH(1, 1);
+            return;
+        }
 		/* They are identical, return true */
 		/* This has to check for undefined variable errors when IS_UNDEF is possible. (only warns for IS_CV) */
 
 		zval_ptr_dtor_nogc(EX_VAR(opline->op2.var));
-		ZEND_VM_SMART_BRANCH(1, ((IS_CV & IS_CV) || (IS_TMP_VAR & IS_CV)));
+		ZEND_VM_SMART_BRANCH(1, 0);
 		return;
 	}
 	switch (Z_TYPE_P(op1)) {
@@ -44457,11 +44562,18 @@ compare_values_any_type:
 	}
 compare_values:
 	if (Z_TYPE_P(op1) <= IS_TRUE) {
+        if (((IS_CV & IS_CV) || (IS_TMP_VAR & IS_CV)) && UNEXPECTED(Z_TYPE_P(op1) == IS_UNDEF)) {
+            /* They are both undefined - fetch them to emit the undefined variable warnings. */
+            op1 = ZVAL_UNDEFINED_OP1();
+            op2 = ZVAL_UNDEFINED_OP2();
+            ZEND_VM_SMART_BRANCH(0, 1);
+            return;
+        }
 		/* They are identical, return false. */
 		/* This has to check for undefined variable errors when IS_UNDEF is possible. (only warns for IS_CV) */
 
 		zval_ptr_dtor_nogc(EX_VAR(opline->op2.var));
-		ZEND_VM_SMART_BRANCH(0, ((IS_CV & IS_CV) || (IS_TMP_VAR & IS_CV)));
+		ZEND_VM_SMART_BRANCH(0, 0);
 		return;
 	}
 	switch (Z_TYPE_P(op1)) {
@@ -44592,11 +44704,18 @@ compare_values_any_type:
 	}
 compare_values:
 	if (Z_TYPE_P(op1) <= IS_TRUE) {
+        if (((IS_CV & IS_CV) || (IS_VAR & IS_CV)) && UNEXPECTED(Z_TYPE_P(op1) == IS_UNDEF)) {
+            /* They are both undefined - fetch them to emit the undefined variable warnings. */
+            op1 = ZVAL_UNDEFINED_OP1();
+            op2 = ZVAL_UNDEFINED_OP2();
+            ZEND_VM_SMART_BRANCH(1, 1);
+            return;
+        }
 		/* They are identical, return true */
 		/* This has to check for undefined variable errors when IS_UNDEF is possible. (only warns for IS_CV) */
 
 		zval_ptr_dtor_nogc(EX_VAR(opline->op2.var));
-		ZEND_VM_SMART_BRANCH(1, ((IS_CV & IS_CV) || (IS_VAR & IS_CV)));
+		ZEND_VM_SMART_BRANCH(1, 0);
 		return;
 	}
 	switch (Z_TYPE_P(op1)) {
@@ -44687,11 +44806,18 @@ compare_values_any_type:
 	}
 compare_values:
 	if (Z_TYPE_P(op1) <= IS_TRUE) {
+        if (((IS_CV & IS_CV) || (IS_VAR & IS_CV)) && UNEXPECTED(Z_TYPE_P(op1) == IS_UNDEF)) {
+            /* They are both undefined - fetch them to emit the undefined variable warnings. */
+            op1 = ZVAL_UNDEFINED_OP1();
+            op2 = ZVAL_UNDEFINED_OP2();
+            ZEND_VM_SMART_BRANCH(0, 1);
+            return;
+        }
 		/* They are identical, return false. */
 		/* This has to check for undefined variable errors when IS_UNDEF is possible. (only warns for IS_CV) */
 
 		zval_ptr_dtor_nogc(EX_VAR(opline->op2.var));
-		ZEND_VM_SMART_BRANCH(0, ((IS_CV & IS_CV) || (IS_VAR & IS_CV)));
+		ZEND_VM_SMART_BRANCH(0, 0);
 		return;
 	}
 	switch (Z_TYPE_P(op1)) {
@@ -46407,11 +46533,18 @@ compare_values_any_type:
 	}
 compare_values:
 	if (Z_TYPE_P(op1) <= IS_TRUE) {
+        if (((IS_CV & IS_CV) || (IS_CV & IS_CV)) && UNEXPECTED(Z_TYPE_P(op1) == IS_UNDEF)) {
+            /* They are both undefined - fetch them to emit the undefined variable warnings. */
+            op1 = ZVAL_UNDEFINED_OP1();
+            op2 = ZVAL_UNDEFINED_OP2();
+            ZEND_VM_SMART_BRANCH(1, 1);
+            return;
+        }
 		/* They are identical, return true */
 		/* This has to check for undefined variable errors when IS_UNDEF is possible. (only warns for IS_CV) */
 
 
-		ZEND_VM_SMART_BRANCH(1, ((IS_CV & IS_CV) || (IS_CV & IS_CV)));
+		ZEND_VM_SMART_BRANCH(1, 0);
 		return;
 	}
 	switch (Z_TYPE_P(op1)) {
@@ -46502,11 +46635,18 @@ compare_values_any_type:
 	}
 compare_values:
 	if (Z_TYPE_P(op1) <= IS_TRUE) {
+        if (((IS_CV & IS_CV) || (IS_CV & IS_CV)) && UNEXPECTED(Z_TYPE_P(op1) == IS_UNDEF)) {
+            /* They are both undefined - fetch them to emit the undefined variable warnings. */
+            op1 = ZVAL_UNDEFINED_OP1();
+            op2 = ZVAL_UNDEFINED_OP2();
+            ZEND_VM_SMART_BRANCH(0, 1);
+            return;
+        }
 		/* They are identical, return false. */
 		/* This has to check for undefined variable errors when IS_UNDEF is possible. (only warns for IS_CV) */
 
 
-		ZEND_VM_SMART_BRANCH(0, ((IS_CV & IS_CV) || (IS_CV & IS_CV)));
+		ZEND_VM_SMART_BRANCH(0, 0);
 		return;
 	}
 	switch (Z_TYPE_P(op1)) {
