@@ -4766,29 +4766,31 @@ static ZEND_VM_COLD ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_IS_IDENTICAL_SPEC
 compare_values_any_type:
 
 	if (Z_TYPE_P(op1) != Z_TYPE_P(op2)) {
+		/* Only VAR can be indirect */
+		if (UNEXPECTED(((IS_CONST & IS_VAR) && Z_TYPE_P(op1) == IS_INDIRECT) || ((IS_CONST & IS_VAR) && Z_TYPE_P(op2) == IS_INDIRECT))) {
+			ZVAL_DEINDIRECT(op1);
+			ZVAL_DEINDIRECT(op2);
+			goto compare_values_any_type;
+		}
 		/* Only VAR and CV can be references */
-		if ((IS_CONST & (IS_VAR|IS_CV)) || (IS_CONST & (IS_VAR|IS_CV))) {
-			if (UNEXPECTED(Z_ISREF_P(op1) || Z_ISREF_P(op2))) {
-				ZVAL_DEREF(op1);
-				ZVAL_DEREF(op2);
-				if (Z_TYPE_P(op1) == Z_TYPE_P(op2)) {
-					goto compare_values;
-				}
+		if (UNEXPECTED(((IS_CONST & (IS_VAR|IS_CV)) && Z_ISREF_P(op1)) || ((IS_CONST & (IS_VAR|IS_CV)) && Z_ISREF_P(op2)))) {
+			ZVAL_DEREF(op1);
+			ZVAL_DEREF(op2);
+			if (Z_TYPE_P(op1) == Z_TYPE_P(op2)) {
+				goto compare_values;
 			}
 		}
 		/* Only CV can be undef */
-		if ((IS_CONST & IS_CV) || (IS_CONST & IS_CV)) {
-			if (UNEXPECTED(Z_TYPE_P(op1) == IS_UNDEF || Z_TYPE_P(op2) == IS_UNDEF)) {
-				/* Convert undef to null, check if they're identical */
-				if (Z_TYPE_P(op1) == IS_UNDEF) {
-					op1 = ZVAL_UNDEFINED_OP1();
-				}
-				if (Z_TYPE_P(op2) == IS_UNDEF) {
-					op2 = ZVAL_UNDEFINED_OP2();
-				}
-				result = Z_TYPE_P(op1) == Z_TYPE_P(op2);
-				goto return_result_maythrow;
+		if (UNEXPECTED(((IS_CONST & IS_CV) && Z_ISUNDEF_P(op1)) || ((IS_CONST & IS_CV) && Z_ISUNDEF_P(op2)) )) {
+			/* Convert undef to null, check if they're identical */
+			if (Z_TYPE_P(op1) == IS_UNDEF) {
+				op1 = ZVAL_UNDEFINED_OP1();
 			}
+			if (Z_TYPE_P(op2) == IS_UNDEF) {
+				op2 = ZVAL_UNDEFINED_OP2();
+			}
+			result = Z_TYPE_P(op1) == Z_TYPE_P(op2);
+			goto return_result_maythrow;
 		}
 		/* They are not identical, return false. This has to check for __destruct errors */
 
@@ -4798,13 +4800,13 @@ compare_values_any_type:
 	}
 compare_values:
 	if (Z_TYPE_P(op1) <= IS_TRUE) {
-        if (((IS_CONST & IS_CV) || (IS_CONST & IS_CV)) && UNEXPECTED(Z_TYPE_P(op1) == IS_UNDEF)) {
-            /* They are both undefined - fetch them to emit the undefined variable warnings. */
-            op1 = ZVAL_UNDEFINED_OP1();
-            op2 = ZVAL_UNDEFINED_OP2();
-            ZEND_VM_SMART_BRANCH(1, 1);
-            return;
-        }
+		if (((IS_CONST & IS_CV) || (IS_CONST & IS_CV)) && UNEXPECTED(Z_TYPE_P(op1) == IS_UNDEF)) {
+			/* They are both undefined - fetch them to emit the undefined variable warnings. */
+			op1 = ZVAL_UNDEFINED_OP1();
+			op2 = ZVAL_UNDEFINED_OP2();
+			ZEND_VM_SMART_BRANCH(1, 1);
+			return;
+		}
 		/* They are identical, return true */
 		/* This has to check for undefined variable errors when IS_UNDEF is possible. (only warns for IS_CV) */
 
@@ -4859,7 +4861,7 @@ return_result_maythrow:
 static ZEND_VM_COLD ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_IS_NOT_IDENTICAL_SPEC_CONST_CONST_HANDLER(ZEND_OPCODE_HANDLER_ARGS)
 {
 	USE_OPLINE
-		zval *op1, *op2;
+	zval *op1, *op2;
 	zend_bool result;
 
 	SAVE_OPLINE();
@@ -4868,29 +4870,31 @@ static ZEND_VM_COLD ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_IS_NOT_IDENTICAL_
 compare_values_any_type:
 
 	if (Z_TYPE_P(op1) != Z_TYPE_P(op2)) {
+		/* Only VAR can be indirect */
+		if (UNEXPECTED(((IS_CONST & IS_VAR) && Z_TYPE_P(op1) == IS_INDIRECT) || ((IS_CONST & IS_VAR) && Z_TYPE_P(op2) == IS_INDIRECT))) {
+			ZVAL_DEINDIRECT(op1);
+			ZVAL_DEINDIRECT(op2);
+			goto compare_values_any_type;
+		}
 		/* Only VAR and CV can be references */
-		if ((IS_CONST & (IS_VAR|IS_CV)) || (IS_CONST & (IS_VAR|IS_CV))) {
-			if (UNEXPECTED(Z_ISREF_P(op1) || Z_ISREF_P(op2))) {
-				ZVAL_DEREF(op1);
-				ZVAL_DEREF(op2);
-				if (Z_TYPE_P(op1) == Z_TYPE_P(op2)) {
-					goto compare_values;
-				}
+		if (UNEXPECTED(((IS_CONST & (IS_VAR|IS_CV)) && Z_ISREF_P(op1)) || ((IS_CONST & (IS_VAR|IS_CV)) && Z_ISREF_P(op2)))) {
+			ZVAL_DEREF(op1);
+			ZVAL_DEREF(op2);
+			if (Z_TYPE_P(op1) == Z_TYPE_P(op2)) {
+				goto compare_values;
 			}
 		}
 		/* Only CV can be undef */
-		if ((IS_CONST & IS_CV) || (IS_CONST & IS_CV)) {
-			if (UNEXPECTED(Z_TYPE_P(op1) == IS_UNDEF || Z_TYPE_P(op2) == IS_UNDEF)) {
-				/* Convert undef to null, check if they're not identical */
-				if (Z_TYPE_P(op1) == IS_UNDEF) {
-					op1 = ZVAL_UNDEFINED_OP1();
-				}
-				if (Z_TYPE_P(op2) == IS_UNDEF) {
-					op2 = ZVAL_UNDEFINED_OP2();
-				}
-				result = Z_TYPE_P(op1) != Z_TYPE_P(op2);
-				goto return_result_maythrow;
+		if (UNEXPECTED(((IS_CONST & IS_CV) && Z_ISUNDEF_P(op1)) || ((IS_CONST & IS_CV) && Z_ISUNDEF_P(op2)) )) {
+			/* Convert undef to null, check if they're not identical */
+			if (Z_TYPE_P(op1) == IS_UNDEF) {
+				op1 = ZVAL_UNDEFINED_OP1();
 			}
+			if (Z_TYPE_P(op2) == IS_UNDEF) {
+				op2 = ZVAL_UNDEFINED_OP2();
+			}
+			result = Z_TYPE_P(op1) != Z_TYPE_P(op2);
+			goto return_result_maythrow;
 		}
 		/* They are not identical, return true. This has to check for __destruct errors (and undefined variable errors when IS_NULL is possible) */
 
@@ -4900,13 +4904,13 @@ compare_values_any_type:
 	}
 compare_values:
 	if (Z_TYPE_P(op1) <= IS_TRUE) {
-        if (((IS_CONST & IS_CV) || (IS_CONST & IS_CV)) && UNEXPECTED(Z_TYPE_P(op1) == IS_UNDEF)) {
-            /* They are both undefined - fetch them to emit the undefined variable warnings. */
-            op1 = ZVAL_UNDEFINED_OP1();
-            op2 = ZVAL_UNDEFINED_OP2();
-            ZEND_VM_SMART_BRANCH(0, 1);
-            return;
-        }
+		if (((IS_CONST & IS_CV) || (IS_CONST & IS_CV)) && UNEXPECTED(Z_TYPE_P(op1) == IS_UNDEF)) {
+			/* They are both undefined - fetch them to emit the undefined variable warnings. */
+			op1 = ZVAL_UNDEFINED_OP1();
+			op2 = ZVAL_UNDEFINED_OP2();
+			ZEND_VM_SMART_BRANCH(0, 1);
+			return;
+		}
 		/* They are identical, return false. */
 		/* This has to check for undefined variable errors when IS_UNDEF is possible. (only warns for IS_CV) */
 
@@ -17976,29 +17980,31 @@ static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_IS_IDENTICAL_SPEC_TMP_CONST_HA
 compare_values_any_type:
 
 	if (Z_TYPE_P(op1) != Z_TYPE_P(op2)) {
+		/* Only VAR can be indirect */
+		if (UNEXPECTED(((IS_TMP_VAR & IS_VAR) && Z_TYPE_P(op1) == IS_INDIRECT) || ((IS_CONST & IS_VAR) && Z_TYPE_P(op2) == IS_INDIRECT))) {
+			ZVAL_DEINDIRECT(op1);
+			ZVAL_DEINDIRECT(op2);
+			goto compare_values_any_type;
+		}
 		/* Only VAR and CV can be references */
-		if ((IS_TMP_VAR & (IS_VAR|IS_CV)) || (IS_CONST & (IS_VAR|IS_CV))) {
-			if (UNEXPECTED(Z_ISREF_P(op1) || Z_ISREF_P(op2))) {
-				ZVAL_DEREF(op1);
-				ZVAL_DEREF(op2);
-				if (Z_TYPE_P(op1) == Z_TYPE_P(op2)) {
-					goto compare_values;
-				}
+		if (UNEXPECTED(((IS_TMP_VAR & (IS_VAR|IS_CV)) && Z_ISREF_P(op1)) || ((IS_CONST & (IS_VAR|IS_CV)) && Z_ISREF_P(op2)))) {
+			ZVAL_DEREF(op1);
+			ZVAL_DEREF(op2);
+			if (Z_TYPE_P(op1) == Z_TYPE_P(op2)) {
+				goto compare_values;
 			}
 		}
 		/* Only CV can be undef */
-		if ((IS_TMP_VAR & IS_CV) || (IS_CONST & IS_CV)) {
-			if (UNEXPECTED(Z_TYPE_P(op1) == IS_UNDEF || Z_TYPE_P(op2) == IS_UNDEF)) {
-				/* Convert undef to null, check if they're identical */
-				if (Z_TYPE_P(op1) == IS_UNDEF) {
-					op1 = ZVAL_UNDEFINED_OP1();
-				}
-				if (Z_TYPE_P(op2) == IS_UNDEF) {
-					op2 = ZVAL_UNDEFINED_OP2();
-				}
-				result = Z_TYPE_P(op1) == Z_TYPE_P(op2);
-				goto return_result_maythrow;
+		if (UNEXPECTED(((IS_TMP_VAR & IS_CV) && Z_ISUNDEF_P(op1)) || ((IS_CONST & IS_CV) && Z_ISUNDEF_P(op2)) )) {
+			/* Convert undef to null, check if they're identical */
+			if (Z_TYPE_P(op1) == IS_UNDEF) {
+				op1 = ZVAL_UNDEFINED_OP1();
 			}
+			if (Z_TYPE_P(op2) == IS_UNDEF) {
+				op2 = ZVAL_UNDEFINED_OP2();
+			}
+			result = Z_TYPE_P(op1) == Z_TYPE_P(op2);
+			goto return_result_maythrow;
 		}
 		/* They are not identical, return false. This has to check for __destruct errors */
 		zval_ptr_dtor_nogc(EX_VAR(opline->op1.var));
@@ -18008,13 +18014,13 @@ compare_values_any_type:
 	}
 compare_values:
 	if (Z_TYPE_P(op1) <= IS_TRUE) {
-        if (((IS_TMP_VAR & IS_CV) || (IS_CONST & IS_CV)) && UNEXPECTED(Z_TYPE_P(op1) == IS_UNDEF)) {
-            /* They are both undefined - fetch them to emit the undefined variable warnings. */
-            op1 = ZVAL_UNDEFINED_OP1();
-            op2 = ZVAL_UNDEFINED_OP2();
-            ZEND_VM_SMART_BRANCH(1, 1);
-            return;
-        }
+		if (((IS_TMP_VAR & IS_CV) || (IS_CONST & IS_CV)) && UNEXPECTED(Z_TYPE_P(op1) == IS_UNDEF)) {
+			/* They are both undefined - fetch them to emit the undefined variable warnings. */
+			op1 = ZVAL_UNDEFINED_OP1();
+			op2 = ZVAL_UNDEFINED_OP2();
+			ZEND_VM_SMART_BRANCH(1, 1);
+			return;
+		}
 		/* They are identical, return true */
 		/* This has to check for undefined variable errors when IS_UNDEF is possible. (only warns for IS_CV) */
 		zval_ptr_dtor_nogc(EX_VAR(opline->op1.var));
@@ -18069,7 +18075,7 @@ return_result_maythrow:
 static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_IS_NOT_IDENTICAL_SPEC_TMP_CONST_HANDLER(ZEND_OPCODE_HANDLER_ARGS)
 {
 	USE_OPLINE
-		zval *op1, *op2;
+	zval *op1, *op2;
 	zend_bool result;
 
 	SAVE_OPLINE();
@@ -18078,29 +18084,31 @@ static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_IS_NOT_IDENTICAL_SPEC_TMP_CONS
 compare_values_any_type:
 
 	if (Z_TYPE_P(op1) != Z_TYPE_P(op2)) {
+		/* Only VAR can be indirect */
+		if (UNEXPECTED(((IS_TMP_VAR & IS_VAR) && Z_TYPE_P(op1) == IS_INDIRECT) || ((IS_CONST & IS_VAR) && Z_TYPE_P(op2) == IS_INDIRECT))) {
+			ZVAL_DEINDIRECT(op1);
+			ZVAL_DEINDIRECT(op2);
+			goto compare_values_any_type;
+		}
 		/* Only VAR and CV can be references */
-		if ((IS_TMP_VAR & (IS_VAR|IS_CV)) || (IS_CONST & (IS_VAR|IS_CV))) {
-			if (UNEXPECTED(Z_ISREF_P(op1) || Z_ISREF_P(op2))) {
-				ZVAL_DEREF(op1);
-				ZVAL_DEREF(op2);
-				if (Z_TYPE_P(op1) == Z_TYPE_P(op2)) {
-					goto compare_values;
-				}
+		if (UNEXPECTED(((IS_TMP_VAR & (IS_VAR|IS_CV)) && Z_ISREF_P(op1)) || ((IS_CONST & (IS_VAR|IS_CV)) && Z_ISREF_P(op2)))) {
+			ZVAL_DEREF(op1);
+			ZVAL_DEREF(op2);
+			if (Z_TYPE_P(op1) == Z_TYPE_P(op2)) {
+				goto compare_values;
 			}
 		}
 		/* Only CV can be undef */
-		if ((IS_TMP_VAR & IS_CV) || (IS_CONST & IS_CV)) {
-			if (UNEXPECTED(Z_TYPE_P(op1) == IS_UNDEF || Z_TYPE_P(op2) == IS_UNDEF)) {
-				/* Convert undef to null, check if they're not identical */
-				if (Z_TYPE_P(op1) == IS_UNDEF) {
-					op1 = ZVAL_UNDEFINED_OP1();
-				}
-				if (Z_TYPE_P(op2) == IS_UNDEF) {
-					op2 = ZVAL_UNDEFINED_OP2();
-				}
-				result = Z_TYPE_P(op1) != Z_TYPE_P(op2);
-				goto return_result_maythrow;
+		if (UNEXPECTED(((IS_TMP_VAR & IS_CV) && Z_ISUNDEF_P(op1)) || ((IS_CONST & IS_CV) && Z_ISUNDEF_P(op2)) )) {
+			/* Convert undef to null, check if they're not identical */
+			if (Z_TYPE_P(op1) == IS_UNDEF) {
+				op1 = ZVAL_UNDEFINED_OP1();
 			}
+			if (Z_TYPE_P(op2) == IS_UNDEF) {
+				op2 = ZVAL_UNDEFINED_OP2();
+			}
+			result = Z_TYPE_P(op1) != Z_TYPE_P(op2);
+			goto return_result_maythrow;
 		}
 		/* They are not identical, return true. This has to check for __destruct errors (and undefined variable errors when IS_NULL is possible) */
 		zval_ptr_dtor_nogc(EX_VAR(opline->op1.var));
@@ -18110,13 +18118,13 @@ compare_values_any_type:
 	}
 compare_values:
 	if (Z_TYPE_P(op1) <= IS_TRUE) {
-        if (((IS_TMP_VAR & IS_CV) || (IS_CONST & IS_CV)) && UNEXPECTED(Z_TYPE_P(op1) == IS_UNDEF)) {
-            /* They are both undefined - fetch them to emit the undefined variable warnings. */
-            op1 = ZVAL_UNDEFINED_OP1();
-            op2 = ZVAL_UNDEFINED_OP2();
-            ZEND_VM_SMART_BRANCH(0, 1);
-            return;
-        }
+		if (((IS_TMP_VAR & IS_CV) || (IS_CONST & IS_CV)) && UNEXPECTED(Z_TYPE_P(op1) == IS_UNDEF)) {
+			/* They are both undefined - fetch them to emit the undefined variable warnings. */
+			op1 = ZVAL_UNDEFINED_OP1();
+			op2 = ZVAL_UNDEFINED_OP2();
+			ZEND_VM_SMART_BRANCH(0, 1);
+			return;
+		}
 		/* They are identical, return false. */
 		/* This has to check for undefined variable errors when IS_UNDEF is possible. (only warns for IS_CV) */
 		zval_ptr_dtor_nogc(EX_VAR(opline->op1.var));
@@ -18951,29 +18959,31 @@ static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_IS_IDENTICAL_SPEC_TMP_TMP_HAND
 compare_values_any_type:
 
 	if (Z_TYPE_P(op1) != Z_TYPE_P(op2)) {
+		/* Only VAR can be indirect */
+		if (UNEXPECTED(((IS_TMP_VAR & IS_VAR) && Z_TYPE_P(op1) == IS_INDIRECT) || ((IS_TMP_VAR & IS_VAR) && Z_TYPE_P(op2) == IS_INDIRECT))) {
+			ZVAL_DEINDIRECT(op1);
+			ZVAL_DEINDIRECT(op2);
+			goto compare_values_any_type;
+		}
 		/* Only VAR and CV can be references */
-		if ((IS_TMP_VAR & (IS_VAR|IS_CV)) || (IS_TMP_VAR & (IS_VAR|IS_CV))) {
-			if (UNEXPECTED(Z_ISREF_P(op1) || Z_ISREF_P(op2))) {
-				ZVAL_DEREF(op1);
-				ZVAL_DEREF(op2);
-				if (Z_TYPE_P(op1) == Z_TYPE_P(op2)) {
-					goto compare_values;
-				}
+		if (UNEXPECTED(((IS_TMP_VAR & (IS_VAR|IS_CV)) && Z_ISREF_P(op1)) || ((IS_TMP_VAR & (IS_VAR|IS_CV)) && Z_ISREF_P(op2)))) {
+			ZVAL_DEREF(op1);
+			ZVAL_DEREF(op2);
+			if (Z_TYPE_P(op1) == Z_TYPE_P(op2)) {
+				goto compare_values;
 			}
 		}
 		/* Only CV can be undef */
-		if ((IS_TMP_VAR & IS_CV) || (IS_TMP_VAR & IS_CV)) {
-			if (UNEXPECTED(Z_TYPE_P(op1) == IS_UNDEF || Z_TYPE_P(op2) == IS_UNDEF)) {
-				/* Convert undef to null, check if they're identical */
-				if (Z_TYPE_P(op1) == IS_UNDEF) {
-					op1 = ZVAL_UNDEFINED_OP1();
-				}
-				if (Z_TYPE_P(op2) == IS_UNDEF) {
-					op2 = ZVAL_UNDEFINED_OP2();
-				}
-				result = Z_TYPE_P(op1) == Z_TYPE_P(op2);
-				goto return_result_maythrow;
+		if (UNEXPECTED(((IS_TMP_VAR & IS_CV) && Z_ISUNDEF_P(op1)) || ((IS_TMP_VAR & IS_CV) && Z_ISUNDEF_P(op2)) )) {
+			/* Convert undef to null, check if they're identical */
+			if (Z_TYPE_P(op1) == IS_UNDEF) {
+				op1 = ZVAL_UNDEFINED_OP1();
 			}
+			if (Z_TYPE_P(op2) == IS_UNDEF) {
+				op2 = ZVAL_UNDEFINED_OP2();
+			}
+			result = Z_TYPE_P(op1) == Z_TYPE_P(op2);
+			goto return_result_maythrow;
 		}
 		/* They are not identical, return false. This has to check for __destruct errors */
 		zval_ptr_dtor_nogc(EX_VAR(opline->op1.var));
@@ -18983,13 +18993,13 @@ compare_values_any_type:
 	}
 compare_values:
 	if (Z_TYPE_P(op1) <= IS_TRUE) {
-        if (((IS_TMP_VAR & IS_CV) || (IS_TMP_VAR & IS_CV)) && UNEXPECTED(Z_TYPE_P(op1) == IS_UNDEF)) {
-            /* They are both undefined - fetch them to emit the undefined variable warnings. */
-            op1 = ZVAL_UNDEFINED_OP1();
-            op2 = ZVAL_UNDEFINED_OP2();
-            ZEND_VM_SMART_BRANCH(1, 1);
-            return;
-        }
+		if (((IS_TMP_VAR & IS_CV) || (IS_TMP_VAR & IS_CV)) && UNEXPECTED(Z_TYPE_P(op1) == IS_UNDEF)) {
+			/* They are both undefined - fetch them to emit the undefined variable warnings. */
+			op1 = ZVAL_UNDEFINED_OP1();
+			op2 = ZVAL_UNDEFINED_OP2();
+			ZEND_VM_SMART_BRANCH(1, 1);
+			return;
+		}
 		/* They are identical, return true */
 		/* This has to check for undefined variable errors when IS_UNDEF is possible. (only warns for IS_CV) */
 		zval_ptr_dtor_nogc(EX_VAR(opline->op1.var));
@@ -19044,7 +19054,7 @@ return_result_maythrow:
 static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_IS_NOT_IDENTICAL_SPEC_TMP_TMP_HANDLER(ZEND_OPCODE_HANDLER_ARGS)
 {
 	USE_OPLINE
-		zval *op1, *op2;
+	zval *op1, *op2;
 	zend_bool result;
 
 	SAVE_OPLINE();
@@ -19053,29 +19063,31 @@ static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_IS_NOT_IDENTICAL_SPEC_TMP_TMP_
 compare_values_any_type:
 
 	if (Z_TYPE_P(op1) != Z_TYPE_P(op2)) {
+		/* Only VAR can be indirect */
+		if (UNEXPECTED(((IS_TMP_VAR & IS_VAR) && Z_TYPE_P(op1) == IS_INDIRECT) || ((IS_TMP_VAR & IS_VAR) && Z_TYPE_P(op2) == IS_INDIRECT))) {
+			ZVAL_DEINDIRECT(op1);
+			ZVAL_DEINDIRECT(op2);
+			goto compare_values_any_type;
+		}
 		/* Only VAR and CV can be references */
-		if ((IS_TMP_VAR & (IS_VAR|IS_CV)) || (IS_TMP_VAR & (IS_VAR|IS_CV))) {
-			if (UNEXPECTED(Z_ISREF_P(op1) || Z_ISREF_P(op2))) {
-				ZVAL_DEREF(op1);
-				ZVAL_DEREF(op2);
-				if (Z_TYPE_P(op1) == Z_TYPE_P(op2)) {
-					goto compare_values;
-				}
+		if (UNEXPECTED(((IS_TMP_VAR & (IS_VAR|IS_CV)) && Z_ISREF_P(op1)) || ((IS_TMP_VAR & (IS_VAR|IS_CV)) && Z_ISREF_P(op2)))) {
+			ZVAL_DEREF(op1);
+			ZVAL_DEREF(op2);
+			if (Z_TYPE_P(op1) == Z_TYPE_P(op2)) {
+				goto compare_values;
 			}
 		}
 		/* Only CV can be undef */
-		if ((IS_TMP_VAR & IS_CV) || (IS_TMP_VAR & IS_CV)) {
-			if (UNEXPECTED(Z_TYPE_P(op1) == IS_UNDEF || Z_TYPE_P(op2) == IS_UNDEF)) {
-				/* Convert undef to null, check if they're not identical */
-				if (Z_TYPE_P(op1) == IS_UNDEF) {
-					op1 = ZVAL_UNDEFINED_OP1();
-				}
-				if (Z_TYPE_P(op2) == IS_UNDEF) {
-					op2 = ZVAL_UNDEFINED_OP2();
-				}
-				result = Z_TYPE_P(op1) != Z_TYPE_P(op2);
-				goto return_result_maythrow;
+		if (UNEXPECTED(((IS_TMP_VAR & IS_CV) && Z_ISUNDEF_P(op1)) || ((IS_TMP_VAR & IS_CV) && Z_ISUNDEF_P(op2)) )) {
+			/* Convert undef to null, check if they're not identical */
+			if (Z_TYPE_P(op1) == IS_UNDEF) {
+				op1 = ZVAL_UNDEFINED_OP1();
 			}
+			if (Z_TYPE_P(op2) == IS_UNDEF) {
+				op2 = ZVAL_UNDEFINED_OP2();
+			}
+			result = Z_TYPE_P(op1) != Z_TYPE_P(op2);
+			goto return_result_maythrow;
 		}
 		/* They are not identical, return true. This has to check for __destruct errors (and undefined variable errors when IS_NULL is possible) */
 		zval_ptr_dtor_nogc(EX_VAR(opline->op1.var));
@@ -19085,13 +19097,13 @@ compare_values_any_type:
 	}
 compare_values:
 	if (Z_TYPE_P(op1) <= IS_TRUE) {
-        if (((IS_TMP_VAR & IS_CV) || (IS_TMP_VAR & IS_CV)) && UNEXPECTED(Z_TYPE_P(op1) == IS_UNDEF)) {
-            /* They are both undefined - fetch them to emit the undefined variable warnings. */
-            op1 = ZVAL_UNDEFINED_OP1();
-            op2 = ZVAL_UNDEFINED_OP2();
-            ZEND_VM_SMART_BRANCH(0, 1);
-            return;
-        }
+		if (((IS_TMP_VAR & IS_CV) || (IS_TMP_VAR & IS_CV)) && UNEXPECTED(Z_TYPE_P(op1) == IS_UNDEF)) {
+			/* They are both undefined - fetch them to emit the undefined variable warnings. */
+			op1 = ZVAL_UNDEFINED_OP1();
+			op2 = ZVAL_UNDEFINED_OP2();
+			ZEND_VM_SMART_BRANCH(0, 1);
+			return;
+		}
 		/* They are identical, return false. */
 		/* This has to check for undefined variable errors when IS_UNDEF is possible. (only warns for IS_CV) */
 		zval_ptr_dtor_nogc(EX_VAR(opline->op1.var));
@@ -21334,29 +21346,31 @@ static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_IS_IDENTICAL_SPEC_VAR_CONST_HA
 compare_values_any_type:
 
 	if (Z_TYPE_P(op1) != Z_TYPE_P(op2)) {
+		/* Only VAR can be indirect */
+		if (UNEXPECTED(((IS_VAR & IS_VAR) && Z_TYPE_P(op1) == IS_INDIRECT) || ((IS_CONST & IS_VAR) && Z_TYPE_P(op2) == IS_INDIRECT))) {
+			ZVAL_DEINDIRECT(op1);
+			ZVAL_DEINDIRECT(op2);
+			goto compare_values_any_type;
+		}
 		/* Only VAR and CV can be references */
-		if ((IS_VAR & (IS_VAR|IS_CV)) || (IS_CONST & (IS_VAR|IS_CV))) {
-			if (UNEXPECTED(Z_ISREF_P(op1) || Z_ISREF_P(op2))) {
-				ZVAL_DEREF(op1);
-				ZVAL_DEREF(op2);
-				if (Z_TYPE_P(op1) == Z_TYPE_P(op2)) {
-					goto compare_values;
-				}
+		if (UNEXPECTED(((IS_VAR & (IS_VAR|IS_CV)) && Z_ISREF_P(op1)) || ((IS_CONST & (IS_VAR|IS_CV)) && Z_ISREF_P(op2)))) {
+			ZVAL_DEREF(op1);
+			ZVAL_DEREF(op2);
+			if (Z_TYPE_P(op1) == Z_TYPE_P(op2)) {
+				goto compare_values;
 			}
 		}
 		/* Only CV can be undef */
-		if ((IS_VAR & IS_CV) || (IS_CONST & IS_CV)) {
-			if (UNEXPECTED(Z_TYPE_P(op1) == IS_UNDEF || Z_TYPE_P(op2) == IS_UNDEF)) {
-				/* Convert undef to null, check if they're identical */
-				if (Z_TYPE_P(op1) == IS_UNDEF) {
-					op1 = ZVAL_UNDEFINED_OP1();
-				}
-				if (Z_TYPE_P(op2) == IS_UNDEF) {
-					op2 = ZVAL_UNDEFINED_OP2();
-				}
-				result = Z_TYPE_P(op1) == Z_TYPE_P(op2);
-				goto return_result_maythrow;
+		if (UNEXPECTED(((IS_VAR & IS_CV) && Z_ISUNDEF_P(op1)) || ((IS_CONST & IS_CV) && Z_ISUNDEF_P(op2)) )) {
+			/* Convert undef to null, check if they're identical */
+			if (Z_TYPE_P(op1) == IS_UNDEF) {
+				op1 = ZVAL_UNDEFINED_OP1();
 			}
+			if (Z_TYPE_P(op2) == IS_UNDEF) {
+				op2 = ZVAL_UNDEFINED_OP2();
+			}
+			result = Z_TYPE_P(op1) == Z_TYPE_P(op2);
+			goto return_result_maythrow;
 		}
 		/* They are not identical, return false. This has to check for __destruct errors */
 		zval_ptr_dtor_nogc(EX_VAR(opline->op1.var));
@@ -21366,13 +21380,13 @@ compare_values_any_type:
 	}
 compare_values:
 	if (Z_TYPE_P(op1) <= IS_TRUE) {
-        if (((IS_VAR & IS_CV) || (IS_CONST & IS_CV)) && UNEXPECTED(Z_TYPE_P(op1) == IS_UNDEF)) {
-            /* They are both undefined - fetch them to emit the undefined variable warnings. */
-            op1 = ZVAL_UNDEFINED_OP1();
-            op2 = ZVAL_UNDEFINED_OP2();
-            ZEND_VM_SMART_BRANCH(1, 1);
-            return;
-        }
+		if (((IS_VAR & IS_CV) || (IS_CONST & IS_CV)) && UNEXPECTED(Z_TYPE_P(op1) == IS_UNDEF)) {
+			/* They are both undefined - fetch them to emit the undefined variable warnings. */
+			op1 = ZVAL_UNDEFINED_OP1();
+			op2 = ZVAL_UNDEFINED_OP2();
+			ZEND_VM_SMART_BRANCH(1, 1);
+			return;
+		}
 		/* They are identical, return true */
 		/* This has to check for undefined variable errors when IS_UNDEF is possible. (only warns for IS_CV) */
 		zval_ptr_dtor_nogc(EX_VAR(opline->op1.var));
@@ -21427,7 +21441,7 @@ return_result_maythrow:
 static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_IS_NOT_IDENTICAL_SPEC_VAR_CONST_HANDLER(ZEND_OPCODE_HANDLER_ARGS)
 {
 	USE_OPLINE
-		zval *op1, *op2;
+	zval *op1, *op2;
 	zend_bool result;
 
 	SAVE_OPLINE();
@@ -21436,29 +21450,31 @@ static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_IS_NOT_IDENTICAL_SPEC_VAR_CONS
 compare_values_any_type:
 
 	if (Z_TYPE_P(op1) != Z_TYPE_P(op2)) {
+		/* Only VAR can be indirect */
+		if (UNEXPECTED(((IS_VAR & IS_VAR) && Z_TYPE_P(op1) == IS_INDIRECT) || ((IS_CONST & IS_VAR) && Z_TYPE_P(op2) == IS_INDIRECT))) {
+			ZVAL_DEINDIRECT(op1);
+			ZVAL_DEINDIRECT(op2);
+			goto compare_values_any_type;
+		}
 		/* Only VAR and CV can be references */
-		if ((IS_VAR & (IS_VAR|IS_CV)) || (IS_CONST & (IS_VAR|IS_CV))) {
-			if (UNEXPECTED(Z_ISREF_P(op1) || Z_ISREF_P(op2))) {
-				ZVAL_DEREF(op1);
-				ZVAL_DEREF(op2);
-				if (Z_TYPE_P(op1) == Z_TYPE_P(op2)) {
-					goto compare_values;
-				}
+		if (UNEXPECTED(((IS_VAR & (IS_VAR|IS_CV)) && Z_ISREF_P(op1)) || ((IS_CONST & (IS_VAR|IS_CV)) && Z_ISREF_P(op2)))) {
+			ZVAL_DEREF(op1);
+			ZVAL_DEREF(op2);
+			if (Z_TYPE_P(op1) == Z_TYPE_P(op2)) {
+				goto compare_values;
 			}
 		}
 		/* Only CV can be undef */
-		if ((IS_VAR & IS_CV) || (IS_CONST & IS_CV)) {
-			if (UNEXPECTED(Z_TYPE_P(op1) == IS_UNDEF || Z_TYPE_P(op2) == IS_UNDEF)) {
-				/* Convert undef to null, check if they're not identical */
-				if (Z_TYPE_P(op1) == IS_UNDEF) {
-					op1 = ZVAL_UNDEFINED_OP1();
-				}
-				if (Z_TYPE_P(op2) == IS_UNDEF) {
-					op2 = ZVAL_UNDEFINED_OP2();
-				}
-				result = Z_TYPE_P(op1) != Z_TYPE_P(op2);
-				goto return_result_maythrow;
+		if (UNEXPECTED(((IS_VAR & IS_CV) && Z_ISUNDEF_P(op1)) || ((IS_CONST & IS_CV) && Z_ISUNDEF_P(op2)) )) {
+			/* Convert undef to null, check if they're not identical */
+			if (Z_TYPE_P(op1) == IS_UNDEF) {
+				op1 = ZVAL_UNDEFINED_OP1();
 			}
+			if (Z_TYPE_P(op2) == IS_UNDEF) {
+				op2 = ZVAL_UNDEFINED_OP2();
+			}
+			result = Z_TYPE_P(op1) != Z_TYPE_P(op2);
+			goto return_result_maythrow;
 		}
 		/* They are not identical, return true. This has to check for __destruct errors (and undefined variable errors when IS_NULL is possible) */
 		zval_ptr_dtor_nogc(EX_VAR(opline->op1.var));
@@ -21468,13 +21484,13 @@ compare_values_any_type:
 	}
 compare_values:
 	if (Z_TYPE_P(op1) <= IS_TRUE) {
-        if (((IS_VAR & IS_CV) || (IS_CONST & IS_CV)) && UNEXPECTED(Z_TYPE_P(op1) == IS_UNDEF)) {
-            /* They are both undefined - fetch them to emit the undefined variable warnings. */
-            op1 = ZVAL_UNDEFINED_OP1();
-            op2 = ZVAL_UNDEFINED_OP2();
-            ZEND_VM_SMART_BRANCH(0, 1);
-            return;
-        }
+		if (((IS_VAR & IS_CV) || (IS_CONST & IS_CV)) && UNEXPECTED(Z_TYPE_P(op1) == IS_UNDEF)) {
+			/* They are both undefined - fetch them to emit the undefined variable warnings. */
+			op1 = ZVAL_UNDEFINED_OP1();
+			op2 = ZVAL_UNDEFINED_OP2();
+			ZEND_VM_SMART_BRANCH(0, 1);
+			return;
+		}
 		/* They are identical, return false. */
 		/* This has to check for undefined variable errors when IS_UNDEF is possible. (only warns for IS_CV) */
 		zval_ptr_dtor_nogc(EX_VAR(opline->op1.var));
@@ -25879,29 +25895,31 @@ static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_IS_IDENTICAL_SPEC_VAR_TMP_HAND
 compare_values_any_type:
 
 	if (Z_TYPE_P(op1) != Z_TYPE_P(op2)) {
+		/* Only VAR can be indirect */
+		if (UNEXPECTED(((IS_VAR & IS_VAR) && Z_TYPE_P(op1) == IS_INDIRECT) || ((IS_TMP_VAR & IS_VAR) && Z_TYPE_P(op2) == IS_INDIRECT))) {
+			ZVAL_DEINDIRECT(op1);
+			ZVAL_DEINDIRECT(op2);
+			goto compare_values_any_type;
+		}
 		/* Only VAR and CV can be references */
-		if ((IS_VAR & (IS_VAR|IS_CV)) || (IS_TMP_VAR & (IS_VAR|IS_CV))) {
-			if (UNEXPECTED(Z_ISREF_P(op1) || Z_ISREF_P(op2))) {
-				ZVAL_DEREF(op1);
-				ZVAL_DEREF(op2);
-				if (Z_TYPE_P(op1) == Z_TYPE_P(op2)) {
-					goto compare_values;
-				}
+		if (UNEXPECTED(((IS_VAR & (IS_VAR|IS_CV)) && Z_ISREF_P(op1)) || ((IS_TMP_VAR & (IS_VAR|IS_CV)) && Z_ISREF_P(op2)))) {
+			ZVAL_DEREF(op1);
+			ZVAL_DEREF(op2);
+			if (Z_TYPE_P(op1) == Z_TYPE_P(op2)) {
+				goto compare_values;
 			}
 		}
 		/* Only CV can be undef */
-		if ((IS_VAR & IS_CV) || (IS_TMP_VAR & IS_CV)) {
-			if (UNEXPECTED(Z_TYPE_P(op1) == IS_UNDEF || Z_TYPE_P(op2) == IS_UNDEF)) {
-				/* Convert undef to null, check if they're identical */
-				if (Z_TYPE_P(op1) == IS_UNDEF) {
-					op1 = ZVAL_UNDEFINED_OP1();
-				}
-				if (Z_TYPE_P(op2) == IS_UNDEF) {
-					op2 = ZVAL_UNDEFINED_OP2();
-				}
-				result = Z_TYPE_P(op1) == Z_TYPE_P(op2);
-				goto return_result_maythrow;
+		if (UNEXPECTED(((IS_VAR & IS_CV) && Z_ISUNDEF_P(op1)) || ((IS_TMP_VAR & IS_CV) && Z_ISUNDEF_P(op2)) )) {
+			/* Convert undef to null, check if they're identical */
+			if (Z_TYPE_P(op1) == IS_UNDEF) {
+				op1 = ZVAL_UNDEFINED_OP1();
 			}
+			if (Z_TYPE_P(op2) == IS_UNDEF) {
+				op2 = ZVAL_UNDEFINED_OP2();
+			}
+			result = Z_TYPE_P(op1) == Z_TYPE_P(op2);
+			goto return_result_maythrow;
 		}
 		/* They are not identical, return false. This has to check for __destruct errors */
 		zval_ptr_dtor_nogc(EX_VAR(opline->op1.var));
@@ -25911,13 +25929,13 @@ compare_values_any_type:
 	}
 compare_values:
 	if (Z_TYPE_P(op1) <= IS_TRUE) {
-        if (((IS_VAR & IS_CV) || (IS_TMP_VAR & IS_CV)) && UNEXPECTED(Z_TYPE_P(op1) == IS_UNDEF)) {
-            /* They are both undefined - fetch them to emit the undefined variable warnings. */
-            op1 = ZVAL_UNDEFINED_OP1();
-            op2 = ZVAL_UNDEFINED_OP2();
-            ZEND_VM_SMART_BRANCH(1, 1);
-            return;
-        }
+		if (((IS_VAR & IS_CV) || (IS_TMP_VAR & IS_CV)) && UNEXPECTED(Z_TYPE_P(op1) == IS_UNDEF)) {
+			/* They are both undefined - fetch them to emit the undefined variable warnings. */
+			op1 = ZVAL_UNDEFINED_OP1();
+			op2 = ZVAL_UNDEFINED_OP2();
+			ZEND_VM_SMART_BRANCH(1, 1);
+			return;
+		}
 		/* They are identical, return true */
 		/* This has to check for undefined variable errors when IS_UNDEF is possible. (only warns for IS_CV) */
 		zval_ptr_dtor_nogc(EX_VAR(opline->op1.var));
@@ -25972,7 +25990,7 @@ return_result_maythrow:
 static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_IS_NOT_IDENTICAL_SPEC_VAR_TMP_HANDLER(ZEND_OPCODE_HANDLER_ARGS)
 {
 	USE_OPLINE
-		zval *op1, *op2;
+	zval *op1, *op2;
 	zend_bool result;
 
 	SAVE_OPLINE();
@@ -25981,29 +25999,31 @@ static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_IS_NOT_IDENTICAL_SPEC_VAR_TMP_
 compare_values_any_type:
 
 	if (Z_TYPE_P(op1) != Z_TYPE_P(op2)) {
+		/* Only VAR can be indirect */
+		if (UNEXPECTED(((IS_VAR & IS_VAR) && Z_TYPE_P(op1) == IS_INDIRECT) || ((IS_TMP_VAR & IS_VAR) && Z_TYPE_P(op2) == IS_INDIRECT))) {
+			ZVAL_DEINDIRECT(op1);
+			ZVAL_DEINDIRECT(op2);
+			goto compare_values_any_type;
+		}
 		/* Only VAR and CV can be references */
-		if ((IS_VAR & (IS_VAR|IS_CV)) || (IS_TMP_VAR & (IS_VAR|IS_CV))) {
-			if (UNEXPECTED(Z_ISREF_P(op1) || Z_ISREF_P(op2))) {
-				ZVAL_DEREF(op1);
-				ZVAL_DEREF(op2);
-				if (Z_TYPE_P(op1) == Z_TYPE_P(op2)) {
-					goto compare_values;
-				}
+		if (UNEXPECTED(((IS_VAR & (IS_VAR|IS_CV)) && Z_ISREF_P(op1)) || ((IS_TMP_VAR & (IS_VAR|IS_CV)) && Z_ISREF_P(op2)))) {
+			ZVAL_DEREF(op1);
+			ZVAL_DEREF(op2);
+			if (Z_TYPE_P(op1) == Z_TYPE_P(op2)) {
+				goto compare_values;
 			}
 		}
 		/* Only CV can be undef */
-		if ((IS_VAR & IS_CV) || (IS_TMP_VAR & IS_CV)) {
-			if (UNEXPECTED(Z_TYPE_P(op1) == IS_UNDEF || Z_TYPE_P(op2) == IS_UNDEF)) {
-				/* Convert undef to null, check if they're not identical */
-				if (Z_TYPE_P(op1) == IS_UNDEF) {
-					op1 = ZVAL_UNDEFINED_OP1();
-				}
-				if (Z_TYPE_P(op2) == IS_UNDEF) {
-					op2 = ZVAL_UNDEFINED_OP2();
-				}
-				result = Z_TYPE_P(op1) != Z_TYPE_P(op2);
-				goto return_result_maythrow;
+		if (UNEXPECTED(((IS_VAR & IS_CV) && Z_ISUNDEF_P(op1)) || ((IS_TMP_VAR & IS_CV) && Z_ISUNDEF_P(op2)) )) {
+			/* Convert undef to null, check if they're not identical */
+			if (Z_TYPE_P(op1) == IS_UNDEF) {
+				op1 = ZVAL_UNDEFINED_OP1();
 			}
+			if (Z_TYPE_P(op2) == IS_UNDEF) {
+				op2 = ZVAL_UNDEFINED_OP2();
+			}
+			result = Z_TYPE_P(op1) != Z_TYPE_P(op2);
+			goto return_result_maythrow;
 		}
 		/* They are not identical, return true. This has to check for __destruct errors (and undefined variable errors when IS_NULL is possible) */
 		zval_ptr_dtor_nogc(EX_VAR(opline->op1.var));
@@ -26013,13 +26033,13 @@ compare_values_any_type:
 	}
 compare_values:
 	if (Z_TYPE_P(op1) <= IS_TRUE) {
-        if (((IS_VAR & IS_CV) || (IS_TMP_VAR & IS_CV)) && UNEXPECTED(Z_TYPE_P(op1) == IS_UNDEF)) {
-            /* They are both undefined - fetch them to emit the undefined variable warnings. */
-            op1 = ZVAL_UNDEFINED_OP1();
-            op2 = ZVAL_UNDEFINED_OP2();
-            ZEND_VM_SMART_BRANCH(0, 1);
-            return;
-        }
+		if (((IS_VAR & IS_CV) || (IS_TMP_VAR & IS_CV)) && UNEXPECTED(Z_TYPE_P(op1) == IS_UNDEF)) {
+			/* They are both undefined - fetch them to emit the undefined variable warnings. */
+			op1 = ZVAL_UNDEFINED_OP1();
+			op2 = ZVAL_UNDEFINED_OP2();
+			ZEND_VM_SMART_BRANCH(0, 1);
+			return;
+		}
 		/* They are identical, return false. */
 		/* This has to check for undefined variable errors when IS_UNDEF is possible. (only warns for IS_CV) */
 		zval_ptr_dtor_nogc(EX_VAR(opline->op1.var));
@@ -26123,29 +26143,31 @@ static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_IS_IDENTICAL_SPEC_VAR_VAR_HAND
 compare_values_any_type:
 
 	if (Z_TYPE_P(op1) != Z_TYPE_P(op2)) {
+		/* Only VAR can be indirect */
+		if (UNEXPECTED(((IS_VAR & IS_VAR) && Z_TYPE_P(op1) == IS_INDIRECT) || ((IS_VAR & IS_VAR) && Z_TYPE_P(op2) == IS_INDIRECT))) {
+			ZVAL_DEINDIRECT(op1);
+			ZVAL_DEINDIRECT(op2);
+			goto compare_values_any_type;
+		}
 		/* Only VAR and CV can be references */
-		if ((IS_VAR & (IS_VAR|IS_CV)) || (IS_VAR & (IS_VAR|IS_CV))) {
-			if (UNEXPECTED(Z_ISREF_P(op1) || Z_ISREF_P(op2))) {
-				ZVAL_DEREF(op1);
-				ZVAL_DEREF(op2);
-				if (Z_TYPE_P(op1) == Z_TYPE_P(op2)) {
-					goto compare_values;
-				}
+		if (UNEXPECTED(((IS_VAR & (IS_VAR|IS_CV)) && Z_ISREF_P(op1)) || ((IS_VAR & (IS_VAR|IS_CV)) && Z_ISREF_P(op2)))) {
+			ZVAL_DEREF(op1);
+			ZVAL_DEREF(op2);
+			if (Z_TYPE_P(op1) == Z_TYPE_P(op2)) {
+				goto compare_values;
 			}
 		}
 		/* Only CV can be undef */
-		if ((IS_VAR & IS_CV) || (IS_VAR & IS_CV)) {
-			if (UNEXPECTED(Z_TYPE_P(op1) == IS_UNDEF || Z_TYPE_P(op2) == IS_UNDEF)) {
-				/* Convert undef to null, check if they're identical */
-				if (Z_TYPE_P(op1) == IS_UNDEF) {
-					op1 = ZVAL_UNDEFINED_OP1();
-				}
-				if (Z_TYPE_P(op2) == IS_UNDEF) {
-					op2 = ZVAL_UNDEFINED_OP2();
-				}
-				result = Z_TYPE_P(op1) == Z_TYPE_P(op2);
-				goto return_result_maythrow;
+		if (UNEXPECTED(((IS_VAR & IS_CV) && Z_ISUNDEF_P(op1)) || ((IS_VAR & IS_CV) && Z_ISUNDEF_P(op2)) )) {
+			/* Convert undef to null, check if they're identical */
+			if (Z_TYPE_P(op1) == IS_UNDEF) {
+				op1 = ZVAL_UNDEFINED_OP1();
 			}
+			if (Z_TYPE_P(op2) == IS_UNDEF) {
+				op2 = ZVAL_UNDEFINED_OP2();
+			}
+			result = Z_TYPE_P(op1) == Z_TYPE_P(op2);
+			goto return_result_maythrow;
 		}
 		/* They are not identical, return false. This has to check for __destruct errors */
 		zval_ptr_dtor_nogc(EX_VAR(opline->op1.var));
@@ -26155,13 +26177,13 @@ compare_values_any_type:
 	}
 compare_values:
 	if (Z_TYPE_P(op1) <= IS_TRUE) {
-        if (((IS_VAR & IS_CV) || (IS_VAR & IS_CV)) && UNEXPECTED(Z_TYPE_P(op1) == IS_UNDEF)) {
-            /* They are both undefined - fetch them to emit the undefined variable warnings. */
-            op1 = ZVAL_UNDEFINED_OP1();
-            op2 = ZVAL_UNDEFINED_OP2();
-            ZEND_VM_SMART_BRANCH(1, 1);
-            return;
-        }
+		if (((IS_VAR & IS_CV) || (IS_VAR & IS_CV)) && UNEXPECTED(Z_TYPE_P(op1) == IS_UNDEF)) {
+			/* They are both undefined - fetch them to emit the undefined variable warnings. */
+			op1 = ZVAL_UNDEFINED_OP1();
+			op2 = ZVAL_UNDEFINED_OP2();
+			ZEND_VM_SMART_BRANCH(1, 1);
+			return;
+		}
 		/* They are identical, return true */
 		/* This has to check for undefined variable errors when IS_UNDEF is possible. (only warns for IS_CV) */
 		zval_ptr_dtor_nogc(EX_VAR(opline->op1.var));
@@ -26216,7 +26238,7 @@ return_result_maythrow:
 static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_IS_NOT_IDENTICAL_SPEC_VAR_VAR_HANDLER(ZEND_OPCODE_HANDLER_ARGS)
 {
 	USE_OPLINE
-		zval *op1, *op2;
+	zval *op1, *op2;
 	zend_bool result;
 
 	SAVE_OPLINE();
@@ -26225,29 +26247,31 @@ static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_IS_NOT_IDENTICAL_SPEC_VAR_VAR_
 compare_values_any_type:
 
 	if (Z_TYPE_P(op1) != Z_TYPE_P(op2)) {
+		/* Only VAR can be indirect */
+		if (UNEXPECTED(((IS_VAR & IS_VAR) && Z_TYPE_P(op1) == IS_INDIRECT) || ((IS_VAR & IS_VAR) && Z_TYPE_P(op2) == IS_INDIRECT))) {
+			ZVAL_DEINDIRECT(op1);
+			ZVAL_DEINDIRECT(op2);
+			goto compare_values_any_type;
+		}
 		/* Only VAR and CV can be references */
-		if ((IS_VAR & (IS_VAR|IS_CV)) || (IS_VAR & (IS_VAR|IS_CV))) {
-			if (UNEXPECTED(Z_ISREF_P(op1) || Z_ISREF_P(op2))) {
-				ZVAL_DEREF(op1);
-				ZVAL_DEREF(op2);
-				if (Z_TYPE_P(op1) == Z_TYPE_P(op2)) {
-					goto compare_values;
-				}
+		if (UNEXPECTED(((IS_VAR & (IS_VAR|IS_CV)) && Z_ISREF_P(op1)) || ((IS_VAR & (IS_VAR|IS_CV)) && Z_ISREF_P(op2)))) {
+			ZVAL_DEREF(op1);
+			ZVAL_DEREF(op2);
+			if (Z_TYPE_P(op1) == Z_TYPE_P(op2)) {
+				goto compare_values;
 			}
 		}
 		/* Only CV can be undef */
-		if ((IS_VAR & IS_CV) || (IS_VAR & IS_CV)) {
-			if (UNEXPECTED(Z_TYPE_P(op1) == IS_UNDEF || Z_TYPE_P(op2) == IS_UNDEF)) {
-				/* Convert undef to null, check if they're not identical */
-				if (Z_TYPE_P(op1) == IS_UNDEF) {
-					op1 = ZVAL_UNDEFINED_OP1();
-				}
-				if (Z_TYPE_P(op2) == IS_UNDEF) {
-					op2 = ZVAL_UNDEFINED_OP2();
-				}
-				result = Z_TYPE_P(op1) != Z_TYPE_P(op2);
-				goto return_result_maythrow;
+		if (UNEXPECTED(((IS_VAR & IS_CV) && Z_ISUNDEF_P(op1)) || ((IS_VAR & IS_CV) && Z_ISUNDEF_P(op2)) )) {
+			/* Convert undef to null, check if they're not identical */
+			if (Z_TYPE_P(op1) == IS_UNDEF) {
+				op1 = ZVAL_UNDEFINED_OP1();
 			}
+			if (Z_TYPE_P(op2) == IS_UNDEF) {
+				op2 = ZVAL_UNDEFINED_OP2();
+			}
+			result = Z_TYPE_P(op1) != Z_TYPE_P(op2);
+			goto return_result_maythrow;
 		}
 		/* They are not identical, return true. This has to check for __destruct errors (and undefined variable errors when IS_NULL is possible) */
 		zval_ptr_dtor_nogc(EX_VAR(opline->op1.var));
@@ -26257,13 +26281,13 @@ compare_values_any_type:
 	}
 compare_values:
 	if (Z_TYPE_P(op1) <= IS_TRUE) {
-        if (((IS_VAR & IS_CV) || (IS_VAR & IS_CV)) && UNEXPECTED(Z_TYPE_P(op1) == IS_UNDEF)) {
-            /* They are both undefined - fetch them to emit the undefined variable warnings. */
-            op1 = ZVAL_UNDEFINED_OP1();
-            op2 = ZVAL_UNDEFINED_OP2();
-            ZEND_VM_SMART_BRANCH(0, 1);
-            return;
-        }
+		if (((IS_VAR & IS_CV) || (IS_VAR & IS_CV)) && UNEXPECTED(Z_TYPE_P(op1) == IS_UNDEF)) {
+			/* They are both undefined - fetch them to emit the undefined variable warnings. */
+			op1 = ZVAL_UNDEFINED_OP1();
+			op2 = ZVAL_UNDEFINED_OP2();
+			ZEND_VM_SMART_BRANCH(0, 1);
+			return;
+		}
 		/* They are identical, return false. */
 		/* This has to check for undefined variable errors when IS_UNDEF is possible. (only warns for IS_CV) */
 		zval_ptr_dtor_nogc(EX_VAR(opline->op1.var));
@@ -37776,29 +37800,31 @@ static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_IS_IDENTICAL_SPEC_CV_CONST_HAN
 compare_values_any_type:
 
 	if (Z_TYPE_P(op1) != Z_TYPE_P(op2)) {
+		/* Only VAR can be indirect */
+		if (UNEXPECTED(((IS_CV & IS_VAR) && Z_TYPE_P(op1) == IS_INDIRECT) || ((IS_CONST & IS_VAR) && Z_TYPE_P(op2) == IS_INDIRECT))) {
+			ZVAL_DEINDIRECT(op1);
+			ZVAL_DEINDIRECT(op2);
+			goto compare_values_any_type;
+		}
 		/* Only VAR and CV can be references */
-		if ((IS_CV & (IS_VAR|IS_CV)) || (IS_CONST & (IS_VAR|IS_CV))) {
-			if (UNEXPECTED(Z_ISREF_P(op1) || Z_ISREF_P(op2))) {
-				ZVAL_DEREF(op1);
-				ZVAL_DEREF(op2);
-				if (Z_TYPE_P(op1) == Z_TYPE_P(op2)) {
-					goto compare_values;
-				}
+		if (UNEXPECTED(((IS_CV & (IS_VAR|IS_CV)) && Z_ISREF_P(op1)) || ((IS_CONST & (IS_VAR|IS_CV)) && Z_ISREF_P(op2)))) {
+			ZVAL_DEREF(op1);
+			ZVAL_DEREF(op2);
+			if (Z_TYPE_P(op1) == Z_TYPE_P(op2)) {
+				goto compare_values;
 			}
 		}
 		/* Only CV can be undef */
-		if ((IS_CV & IS_CV) || (IS_CONST & IS_CV)) {
-			if (UNEXPECTED(Z_TYPE_P(op1) == IS_UNDEF || Z_TYPE_P(op2) == IS_UNDEF)) {
-				/* Convert undef to null, check if they're identical */
-				if (Z_TYPE_P(op1) == IS_UNDEF) {
-					op1 = ZVAL_UNDEFINED_OP1();
-				}
-				if (Z_TYPE_P(op2) == IS_UNDEF) {
-					op2 = ZVAL_UNDEFINED_OP2();
-				}
-				result = Z_TYPE_P(op1) == Z_TYPE_P(op2);
-				goto return_result_maythrow;
+		if (UNEXPECTED(((IS_CV & IS_CV) && Z_ISUNDEF_P(op1)) || ((IS_CONST & IS_CV) && Z_ISUNDEF_P(op2)) )) {
+			/* Convert undef to null, check if they're identical */
+			if (Z_TYPE_P(op1) == IS_UNDEF) {
+				op1 = ZVAL_UNDEFINED_OP1();
 			}
+			if (Z_TYPE_P(op2) == IS_UNDEF) {
+				op2 = ZVAL_UNDEFINED_OP2();
+			}
+			result = Z_TYPE_P(op1) == Z_TYPE_P(op2);
+			goto return_result_maythrow;
 		}
 		/* They are not identical, return false. This has to check for __destruct errors */
 
@@ -37808,13 +37834,13 @@ compare_values_any_type:
 	}
 compare_values:
 	if (Z_TYPE_P(op1) <= IS_TRUE) {
-        if (((IS_CV & IS_CV) || (IS_CONST & IS_CV)) && UNEXPECTED(Z_TYPE_P(op1) == IS_UNDEF)) {
-            /* They are both undefined - fetch them to emit the undefined variable warnings. */
-            op1 = ZVAL_UNDEFINED_OP1();
-            op2 = ZVAL_UNDEFINED_OP2();
-            ZEND_VM_SMART_BRANCH(1, 1);
-            return;
-        }
+		if (((IS_CV & IS_CV) || (IS_CONST & IS_CV)) && UNEXPECTED(Z_TYPE_P(op1) == IS_UNDEF)) {
+			/* They are both undefined - fetch them to emit the undefined variable warnings. */
+			op1 = ZVAL_UNDEFINED_OP1();
+			op2 = ZVAL_UNDEFINED_OP2();
+			ZEND_VM_SMART_BRANCH(1, 1);
+			return;
+		}
 		/* They are identical, return true */
 		/* This has to check for undefined variable errors when IS_UNDEF is possible. (only warns for IS_CV) */
 
@@ -37869,7 +37895,7 @@ return_result_maythrow:
 static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_IS_NOT_IDENTICAL_SPEC_CV_CONST_HANDLER(ZEND_OPCODE_HANDLER_ARGS)
 {
 	USE_OPLINE
-		zval *op1, *op2;
+	zval *op1, *op2;
 	zend_bool result;
 
 	SAVE_OPLINE();
@@ -37878,29 +37904,31 @@ static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_IS_NOT_IDENTICAL_SPEC_CV_CONST
 compare_values_any_type:
 
 	if (Z_TYPE_P(op1) != Z_TYPE_P(op2)) {
+		/* Only VAR can be indirect */
+		if (UNEXPECTED(((IS_CV & IS_VAR) && Z_TYPE_P(op1) == IS_INDIRECT) || ((IS_CONST & IS_VAR) && Z_TYPE_P(op2) == IS_INDIRECT))) {
+			ZVAL_DEINDIRECT(op1);
+			ZVAL_DEINDIRECT(op2);
+			goto compare_values_any_type;
+		}
 		/* Only VAR and CV can be references */
-		if ((IS_CV & (IS_VAR|IS_CV)) || (IS_CONST & (IS_VAR|IS_CV))) {
-			if (UNEXPECTED(Z_ISREF_P(op1) || Z_ISREF_P(op2))) {
-				ZVAL_DEREF(op1);
-				ZVAL_DEREF(op2);
-				if (Z_TYPE_P(op1) == Z_TYPE_P(op2)) {
-					goto compare_values;
-				}
+		if (UNEXPECTED(((IS_CV & (IS_VAR|IS_CV)) && Z_ISREF_P(op1)) || ((IS_CONST & (IS_VAR|IS_CV)) && Z_ISREF_P(op2)))) {
+			ZVAL_DEREF(op1);
+			ZVAL_DEREF(op2);
+			if (Z_TYPE_P(op1) == Z_TYPE_P(op2)) {
+				goto compare_values;
 			}
 		}
 		/* Only CV can be undef */
-		if ((IS_CV & IS_CV) || (IS_CONST & IS_CV)) {
-			if (UNEXPECTED(Z_TYPE_P(op1) == IS_UNDEF || Z_TYPE_P(op2) == IS_UNDEF)) {
-				/* Convert undef to null, check if they're not identical */
-				if (Z_TYPE_P(op1) == IS_UNDEF) {
-					op1 = ZVAL_UNDEFINED_OP1();
-				}
-				if (Z_TYPE_P(op2) == IS_UNDEF) {
-					op2 = ZVAL_UNDEFINED_OP2();
-				}
-				result = Z_TYPE_P(op1) != Z_TYPE_P(op2);
-				goto return_result_maythrow;
+		if (UNEXPECTED(((IS_CV & IS_CV) && Z_ISUNDEF_P(op1)) || ((IS_CONST & IS_CV) && Z_ISUNDEF_P(op2)) )) {
+			/* Convert undef to null, check if they're not identical */
+			if (Z_TYPE_P(op1) == IS_UNDEF) {
+				op1 = ZVAL_UNDEFINED_OP1();
 			}
+			if (Z_TYPE_P(op2) == IS_UNDEF) {
+				op2 = ZVAL_UNDEFINED_OP2();
+			}
+			result = Z_TYPE_P(op1) != Z_TYPE_P(op2);
+			goto return_result_maythrow;
 		}
 		/* They are not identical, return true. This has to check for __destruct errors (and undefined variable errors when IS_NULL is possible) */
 
@@ -37910,13 +37938,13 @@ compare_values_any_type:
 	}
 compare_values:
 	if (Z_TYPE_P(op1) <= IS_TRUE) {
-        if (((IS_CV & IS_CV) || (IS_CONST & IS_CV)) && UNEXPECTED(Z_TYPE_P(op1) == IS_UNDEF)) {
-            /* They are both undefined - fetch them to emit the undefined variable warnings. */
-            op1 = ZVAL_UNDEFINED_OP1();
-            op2 = ZVAL_UNDEFINED_OP2();
-            ZEND_VM_SMART_BRANCH(0, 1);
-            return;
-        }
+		if (((IS_CV & IS_CV) || (IS_CONST & IS_CV)) && UNEXPECTED(Z_TYPE_P(op1) == IS_UNDEF)) {
+			/* They are both undefined - fetch them to emit the undefined variable warnings. */
+			op1 = ZVAL_UNDEFINED_OP1();
+			op2 = ZVAL_UNDEFINED_OP2();
+			ZEND_VM_SMART_BRANCH(0, 1);
+			return;
+		}
 		/* They are identical, return false. */
 		/* This has to check for undefined variable errors when IS_UNDEF is possible. (only warns for IS_CV) */
 
@@ -44428,29 +44456,31 @@ static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_IS_IDENTICAL_SPEC_CV_TMP_HANDL
 compare_values_any_type:
 
 	if (Z_TYPE_P(op1) != Z_TYPE_P(op2)) {
+		/* Only VAR can be indirect */
+		if (UNEXPECTED(((IS_CV & IS_VAR) && Z_TYPE_P(op1) == IS_INDIRECT) || ((IS_TMP_VAR & IS_VAR) && Z_TYPE_P(op2) == IS_INDIRECT))) {
+			ZVAL_DEINDIRECT(op1);
+			ZVAL_DEINDIRECT(op2);
+			goto compare_values_any_type;
+		}
 		/* Only VAR and CV can be references */
-		if ((IS_CV & (IS_VAR|IS_CV)) || (IS_TMP_VAR & (IS_VAR|IS_CV))) {
-			if (UNEXPECTED(Z_ISREF_P(op1) || Z_ISREF_P(op2))) {
-				ZVAL_DEREF(op1);
-				ZVAL_DEREF(op2);
-				if (Z_TYPE_P(op1) == Z_TYPE_P(op2)) {
-					goto compare_values;
-				}
+		if (UNEXPECTED(((IS_CV & (IS_VAR|IS_CV)) && Z_ISREF_P(op1)) || ((IS_TMP_VAR & (IS_VAR|IS_CV)) && Z_ISREF_P(op2)))) {
+			ZVAL_DEREF(op1);
+			ZVAL_DEREF(op2);
+			if (Z_TYPE_P(op1) == Z_TYPE_P(op2)) {
+				goto compare_values;
 			}
 		}
 		/* Only CV can be undef */
-		if ((IS_CV & IS_CV) || (IS_TMP_VAR & IS_CV)) {
-			if (UNEXPECTED(Z_TYPE_P(op1) == IS_UNDEF || Z_TYPE_P(op2) == IS_UNDEF)) {
-				/* Convert undef to null, check if they're identical */
-				if (Z_TYPE_P(op1) == IS_UNDEF) {
-					op1 = ZVAL_UNDEFINED_OP1();
-				}
-				if (Z_TYPE_P(op2) == IS_UNDEF) {
-					op2 = ZVAL_UNDEFINED_OP2();
-				}
-				result = Z_TYPE_P(op1) == Z_TYPE_P(op2);
-				goto return_result_maythrow;
+		if (UNEXPECTED(((IS_CV & IS_CV) && Z_ISUNDEF_P(op1)) || ((IS_TMP_VAR & IS_CV) && Z_ISUNDEF_P(op2)) )) {
+			/* Convert undef to null, check if they're identical */
+			if (Z_TYPE_P(op1) == IS_UNDEF) {
+				op1 = ZVAL_UNDEFINED_OP1();
 			}
+			if (Z_TYPE_P(op2) == IS_UNDEF) {
+				op2 = ZVAL_UNDEFINED_OP2();
+			}
+			result = Z_TYPE_P(op1) == Z_TYPE_P(op2);
+			goto return_result_maythrow;
 		}
 		/* They are not identical, return false. This has to check for __destruct errors */
 
@@ -44460,13 +44490,13 @@ compare_values_any_type:
 	}
 compare_values:
 	if (Z_TYPE_P(op1) <= IS_TRUE) {
-        if (((IS_CV & IS_CV) || (IS_TMP_VAR & IS_CV)) && UNEXPECTED(Z_TYPE_P(op1) == IS_UNDEF)) {
-            /* They are both undefined - fetch them to emit the undefined variable warnings. */
-            op1 = ZVAL_UNDEFINED_OP1();
-            op2 = ZVAL_UNDEFINED_OP2();
-            ZEND_VM_SMART_BRANCH(1, 1);
-            return;
-        }
+		if (((IS_CV & IS_CV) || (IS_TMP_VAR & IS_CV)) && UNEXPECTED(Z_TYPE_P(op1) == IS_UNDEF)) {
+			/* They are both undefined - fetch them to emit the undefined variable warnings. */
+			op1 = ZVAL_UNDEFINED_OP1();
+			op2 = ZVAL_UNDEFINED_OP2();
+			ZEND_VM_SMART_BRANCH(1, 1);
+			return;
+		}
 		/* They are identical, return true */
 		/* This has to check for undefined variable errors when IS_UNDEF is possible. (only warns for IS_CV) */
 
@@ -44521,7 +44551,7 @@ return_result_maythrow:
 static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_IS_NOT_IDENTICAL_SPEC_CV_TMP_HANDLER(ZEND_OPCODE_HANDLER_ARGS)
 {
 	USE_OPLINE
-		zval *op1, *op2;
+	zval *op1, *op2;
 	zend_bool result;
 
 	SAVE_OPLINE();
@@ -44530,29 +44560,31 @@ static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_IS_NOT_IDENTICAL_SPEC_CV_TMP_H
 compare_values_any_type:
 
 	if (Z_TYPE_P(op1) != Z_TYPE_P(op2)) {
+		/* Only VAR can be indirect */
+		if (UNEXPECTED(((IS_CV & IS_VAR) && Z_TYPE_P(op1) == IS_INDIRECT) || ((IS_TMP_VAR & IS_VAR) && Z_TYPE_P(op2) == IS_INDIRECT))) {
+			ZVAL_DEINDIRECT(op1);
+			ZVAL_DEINDIRECT(op2);
+			goto compare_values_any_type;
+		}
 		/* Only VAR and CV can be references */
-		if ((IS_CV & (IS_VAR|IS_CV)) || (IS_TMP_VAR & (IS_VAR|IS_CV))) {
-			if (UNEXPECTED(Z_ISREF_P(op1) || Z_ISREF_P(op2))) {
-				ZVAL_DEREF(op1);
-				ZVAL_DEREF(op2);
-				if (Z_TYPE_P(op1) == Z_TYPE_P(op2)) {
-					goto compare_values;
-				}
+		if (UNEXPECTED(((IS_CV & (IS_VAR|IS_CV)) && Z_ISREF_P(op1)) || ((IS_TMP_VAR & (IS_VAR|IS_CV)) && Z_ISREF_P(op2)))) {
+			ZVAL_DEREF(op1);
+			ZVAL_DEREF(op2);
+			if (Z_TYPE_P(op1) == Z_TYPE_P(op2)) {
+				goto compare_values;
 			}
 		}
 		/* Only CV can be undef */
-		if ((IS_CV & IS_CV) || (IS_TMP_VAR & IS_CV)) {
-			if (UNEXPECTED(Z_TYPE_P(op1) == IS_UNDEF || Z_TYPE_P(op2) == IS_UNDEF)) {
-				/* Convert undef to null, check if they're not identical */
-				if (Z_TYPE_P(op1) == IS_UNDEF) {
-					op1 = ZVAL_UNDEFINED_OP1();
-				}
-				if (Z_TYPE_P(op2) == IS_UNDEF) {
-					op2 = ZVAL_UNDEFINED_OP2();
-				}
-				result = Z_TYPE_P(op1) != Z_TYPE_P(op2);
-				goto return_result_maythrow;
+		if (UNEXPECTED(((IS_CV & IS_CV) && Z_ISUNDEF_P(op1)) || ((IS_TMP_VAR & IS_CV) && Z_ISUNDEF_P(op2)) )) {
+			/* Convert undef to null, check if they're not identical */
+			if (Z_TYPE_P(op1) == IS_UNDEF) {
+				op1 = ZVAL_UNDEFINED_OP1();
 			}
+			if (Z_TYPE_P(op2) == IS_UNDEF) {
+				op2 = ZVAL_UNDEFINED_OP2();
+			}
+			result = Z_TYPE_P(op1) != Z_TYPE_P(op2);
+			goto return_result_maythrow;
 		}
 		/* They are not identical, return true. This has to check for __destruct errors (and undefined variable errors when IS_NULL is possible) */
 
@@ -44562,13 +44594,13 @@ compare_values_any_type:
 	}
 compare_values:
 	if (Z_TYPE_P(op1) <= IS_TRUE) {
-        if (((IS_CV & IS_CV) || (IS_TMP_VAR & IS_CV)) && UNEXPECTED(Z_TYPE_P(op1) == IS_UNDEF)) {
-            /* They are both undefined - fetch them to emit the undefined variable warnings. */
-            op1 = ZVAL_UNDEFINED_OP1();
-            op2 = ZVAL_UNDEFINED_OP2();
-            ZEND_VM_SMART_BRANCH(0, 1);
-            return;
-        }
+		if (((IS_CV & IS_CV) || (IS_TMP_VAR & IS_CV)) && UNEXPECTED(Z_TYPE_P(op1) == IS_UNDEF)) {
+			/* They are both undefined - fetch them to emit the undefined variable warnings. */
+			op1 = ZVAL_UNDEFINED_OP1();
+			op2 = ZVAL_UNDEFINED_OP2();
+			ZEND_VM_SMART_BRANCH(0, 1);
+			return;
+		}
 		/* They are identical, return false. */
 		/* This has to check for undefined variable errors when IS_UNDEF is possible. (only warns for IS_CV) */
 
@@ -44672,29 +44704,31 @@ static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_IS_IDENTICAL_SPEC_CV_VAR_HANDL
 compare_values_any_type:
 
 	if (Z_TYPE_P(op1) != Z_TYPE_P(op2)) {
+		/* Only VAR can be indirect */
+		if (UNEXPECTED(((IS_CV & IS_VAR) && Z_TYPE_P(op1) == IS_INDIRECT) || ((IS_VAR & IS_VAR) && Z_TYPE_P(op2) == IS_INDIRECT))) {
+			ZVAL_DEINDIRECT(op1);
+			ZVAL_DEINDIRECT(op2);
+			goto compare_values_any_type;
+		}
 		/* Only VAR and CV can be references */
-		if ((IS_CV & (IS_VAR|IS_CV)) || (IS_VAR & (IS_VAR|IS_CV))) {
-			if (UNEXPECTED(Z_ISREF_P(op1) || Z_ISREF_P(op2))) {
-				ZVAL_DEREF(op1);
-				ZVAL_DEREF(op2);
-				if (Z_TYPE_P(op1) == Z_TYPE_P(op2)) {
-					goto compare_values;
-				}
+		if (UNEXPECTED(((IS_CV & (IS_VAR|IS_CV)) && Z_ISREF_P(op1)) || ((IS_VAR & (IS_VAR|IS_CV)) && Z_ISREF_P(op2)))) {
+			ZVAL_DEREF(op1);
+			ZVAL_DEREF(op2);
+			if (Z_TYPE_P(op1) == Z_TYPE_P(op2)) {
+				goto compare_values;
 			}
 		}
 		/* Only CV can be undef */
-		if ((IS_CV & IS_CV) || (IS_VAR & IS_CV)) {
-			if (UNEXPECTED(Z_TYPE_P(op1) == IS_UNDEF || Z_TYPE_P(op2) == IS_UNDEF)) {
-				/* Convert undef to null, check if they're identical */
-				if (Z_TYPE_P(op1) == IS_UNDEF) {
-					op1 = ZVAL_UNDEFINED_OP1();
-				}
-				if (Z_TYPE_P(op2) == IS_UNDEF) {
-					op2 = ZVAL_UNDEFINED_OP2();
-				}
-				result = Z_TYPE_P(op1) == Z_TYPE_P(op2);
-				goto return_result_maythrow;
+		if (UNEXPECTED(((IS_CV & IS_CV) && Z_ISUNDEF_P(op1)) || ((IS_VAR & IS_CV) && Z_ISUNDEF_P(op2)) )) {
+			/* Convert undef to null, check if they're identical */
+			if (Z_TYPE_P(op1) == IS_UNDEF) {
+				op1 = ZVAL_UNDEFINED_OP1();
 			}
+			if (Z_TYPE_P(op2) == IS_UNDEF) {
+				op2 = ZVAL_UNDEFINED_OP2();
+			}
+			result = Z_TYPE_P(op1) == Z_TYPE_P(op2);
+			goto return_result_maythrow;
 		}
 		/* They are not identical, return false. This has to check for __destruct errors */
 
@@ -44704,13 +44738,13 @@ compare_values_any_type:
 	}
 compare_values:
 	if (Z_TYPE_P(op1) <= IS_TRUE) {
-        if (((IS_CV & IS_CV) || (IS_VAR & IS_CV)) && UNEXPECTED(Z_TYPE_P(op1) == IS_UNDEF)) {
-            /* They are both undefined - fetch them to emit the undefined variable warnings. */
-            op1 = ZVAL_UNDEFINED_OP1();
-            op2 = ZVAL_UNDEFINED_OP2();
-            ZEND_VM_SMART_BRANCH(1, 1);
-            return;
-        }
+		if (((IS_CV & IS_CV) || (IS_VAR & IS_CV)) && UNEXPECTED(Z_TYPE_P(op1) == IS_UNDEF)) {
+			/* They are both undefined - fetch them to emit the undefined variable warnings. */
+			op1 = ZVAL_UNDEFINED_OP1();
+			op2 = ZVAL_UNDEFINED_OP2();
+			ZEND_VM_SMART_BRANCH(1, 1);
+			return;
+		}
 		/* They are identical, return true */
 		/* This has to check for undefined variable errors when IS_UNDEF is possible. (only warns for IS_CV) */
 
@@ -44765,7 +44799,7 @@ return_result_maythrow:
 static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_IS_NOT_IDENTICAL_SPEC_CV_VAR_HANDLER(ZEND_OPCODE_HANDLER_ARGS)
 {
 	USE_OPLINE
-		zval *op1, *op2;
+	zval *op1, *op2;
 	zend_bool result;
 
 	SAVE_OPLINE();
@@ -44774,29 +44808,31 @@ static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_IS_NOT_IDENTICAL_SPEC_CV_VAR_H
 compare_values_any_type:
 
 	if (Z_TYPE_P(op1) != Z_TYPE_P(op2)) {
+		/* Only VAR can be indirect */
+		if (UNEXPECTED(((IS_CV & IS_VAR) && Z_TYPE_P(op1) == IS_INDIRECT) || ((IS_VAR & IS_VAR) && Z_TYPE_P(op2) == IS_INDIRECT))) {
+			ZVAL_DEINDIRECT(op1);
+			ZVAL_DEINDIRECT(op2);
+			goto compare_values_any_type;
+		}
 		/* Only VAR and CV can be references */
-		if ((IS_CV & (IS_VAR|IS_CV)) || (IS_VAR & (IS_VAR|IS_CV))) {
-			if (UNEXPECTED(Z_ISREF_P(op1) || Z_ISREF_P(op2))) {
-				ZVAL_DEREF(op1);
-				ZVAL_DEREF(op2);
-				if (Z_TYPE_P(op1) == Z_TYPE_P(op2)) {
-					goto compare_values;
-				}
+		if (UNEXPECTED(((IS_CV & (IS_VAR|IS_CV)) && Z_ISREF_P(op1)) || ((IS_VAR & (IS_VAR|IS_CV)) && Z_ISREF_P(op2)))) {
+			ZVAL_DEREF(op1);
+			ZVAL_DEREF(op2);
+			if (Z_TYPE_P(op1) == Z_TYPE_P(op2)) {
+				goto compare_values;
 			}
 		}
 		/* Only CV can be undef */
-		if ((IS_CV & IS_CV) || (IS_VAR & IS_CV)) {
-			if (UNEXPECTED(Z_TYPE_P(op1) == IS_UNDEF || Z_TYPE_P(op2) == IS_UNDEF)) {
-				/* Convert undef to null, check if they're not identical */
-				if (Z_TYPE_P(op1) == IS_UNDEF) {
-					op1 = ZVAL_UNDEFINED_OP1();
-				}
-				if (Z_TYPE_P(op2) == IS_UNDEF) {
-					op2 = ZVAL_UNDEFINED_OP2();
-				}
-				result = Z_TYPE_P(op1) != Z_TYPE_P(op2);
-				goto return_result_maythrow;
+		if (UNEXPECTED(((IS_CV & IS_CV) && Z_ISUNDEF_P(op1)) || ((IS_VAR & IS_CV) && Z_ISUNDEF_P(op2)) )) {
+			/* Convert undef to null, check if they're not identical */
+			if (Z_TYPE_P(op1) == IS_UNDEF) {
+				op1 = ZVAL_UNDEFINED_OP1();
 			}
+			if (Z_TYPE_P(op2) == IS_UNDEF) {
+				op2 = ZVAL_UNDEFINED_OP2();
+			}
+			result = Z_TYPE_P(op1) != Z_TYPE_P(op2);
+			goto return_result_maythrow;
 		}
 		/* They are not identical, return true. This has to check for __destruct errors (and undefined variable errors when IS_NULL is possible) */
 
@@ -44806,13 +44842,13 @@ compare_values_any_type:
 	}
 compare_values:
 	if (Z_TYPE_P(op1) <= IS_TRUE) {
-        if (((IS_CV & IS_CV) || (IS_VAR & IS_CV)) && UNEXPECTED(Z_TYPE_P(op1) == IS_UNDEF)) {
-            /* They are both undefined - fetch them to emit the undefined variable warnings. */
-            op1 = ZVAL_UNDEFINED_OP1();
-            op2 = ZVAL_UNDEFINED_OP2();
-            ZEND_VM_SMART_BRANCH(0, 1);
-            return;
-        }
+		if (((IS_CV & IS_CV) || (IS_VAR & IS_CV)) && UNEXPECTED(Z_TYPE_P(op1) == IS_UNDEF)) {
+			/* They are both undefined - fetch them to emit the undefined variable warnings. */
+			op1 = ZVAL_UNDEFINED_OP1();
+			op2 = ZVAL_UNDEFINED_OP2();
+			ZEND_VM_SMART_BRANCH(0, 1);
+			return;
+		}
 		/* They are identical, return false. */
 		/* This has to check for undefined variable errors when IS_UNDEF is possible. (only warns for IS_CV) */
 
@@ -46501,29 +46537,31 @@ static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_IS_IDENTICAL_SPEC_CV_CV_HANDLE
 compare_values_any_type:
 
 	if (Z_TYPE_P(op1) != Z_TYPE_P(op2)) {
+		/* Only VAR can be indirect */
+		if (UNEXPECTED(((IS_CV & IS_VAR) && Z_TYPE_P(op1) == IS_INDIRECT) || ((IS_CV & IS_VAR) && Z_TYPE_P(op2) == IS_INDIRECT))) {
+			ZVAL_DEINDIRECT(op1);
+			ZVAL_DEINDIRECT(op2);
+			goto compare_values_any_type;
+		}
 		/* Only VAR and CV can be references */
-		if ((IS_CV & (IS_VAR|IS_CV)) || (IS_CV & (IS_VAR|IS_CV))) {
-			if (UNEXPECTED(Z_ISREF_P(op1) || Z_ISREF_P(op2))) {
-				ZVAL_DEREF(op1);
-				ZVAL_DEREF(op2);
-				if (Z_TYPE_P(op1) == Z_TYPE_P(op2)) {
-					goto compare_values;
-				}
+		if (UNEXPECTED(((IS_CV & (IS_VAR|IS_CV)) && Z_ISREF_P(op1)) || ((IS_CV & (IS_VAR|IS_CV)) && Z_ISREF_P(op2)))) {
+			ZVAL_DEREF(op1);
+			ZVAL_DEREF(op2);
+			if (Z_TYPE_P(op1) == Z_TYPE_P(op2)) {
+				goto compare_values;
 			}
 		}
 		/* Only CV can be undef */
-		if ((IS_CV & IS_CV) || (IS_CV & IS_CV)) {
-			if (UNEXPECTED(Z_TYPE_P(op1) == IS_UNDEF || Z_TYPE_P(op2) == IS_UNDEF)) {
-				/* Convert undef to null, check if they're identical */
-				if (Z_TYPE_P(op1) == IS_UNDEF) {
-					op1 = ZVAL_UNDEFINED_OP1();
-				}
-				if (Z_TYPE_P(op2) == IS_UNDEF) {
-					op2 = ZVAL_UNDEFINED_OP2();
-				}
-				result = Z_TYPE_P(op1) == Z_TYPE_P(op2);
-				goto return_result_maythrow;
+		if (UNEXPECTED(((IS_CV & IS_CV) && Z_ISUNDEF_P(op1)) || ((IS_CV & IS_CV) && Z_ISUNDEF_P(op2)) )) {
+			/* Convert undef to null, check if they're identical */
+			if (Z_TYPE_P(op1) == IS_UNDEF) {
+				op1 = ZVAL_UNDEFINED_OP1();
 			}
+			if (Z_TYPE_P(op2) == IS_UNDEF) {
+				op2 = ZVAL_UNDEFINED_OP2();
+			}
+			result = Z_TYPE_P(op1) == Z_TYPE_P(op2);
+			goto return_result_maythrow;
 		}
 		/* They are not identical, return false. This has to check for __destruct errors */
 
@@ -46533,13 +46571,13 @@ compare_values_any_type:
 	}
 compare_values:
 	if (Z_TYPE_P(op1) <= IS_TRUE) {
-        if (((IS_CV & IS_CV) || (IS_CV & IS_CV)) && UNEXPECTED(Z_TYPE_P(op1) == IS_UNDEF)) {
-            /* They are both undefined - fetch them to emit the undefined variable warnings. */
-            op1 = ZVAL_UNDEFINED_OP1();
-            op2 = ZVAL_UNDEFINED_OP2();
-            ZEND_VM_SMART_BRANCH(1, 1);
-            return;
-        }
+		if (((IS_CV & IS_CV) || (IS_CV & IS_CV)) && UNEXPECTED(Z_TYPE_P(op1) == IS_UNDEF)) {
+			/* They are both undefined - fetch them to emit the undefined variable warnings. */
+			op1 = ZVAL_UNDEFINED_OP1();
+			op2 = ZVAL_UNDEFINED_OP2();
+			ZEND_VM_SMART_BRANCH(1, 1);
+			return;
+		}
 		/* They are identical, return true */
 		/* This has to check for undefined variable errors when IS_UNDEF is possible. (only warns for IS_CV) */
 
@@ -46594,7 +46632,7 @@ return_result_maythrow:
 static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_IS_NOT_IDENTICAL_SPEC_CV_CV_HANDLER(ZEND_OPCODE_HANDLER_ARGS)
 {
 	USE_OPLINE
-		zval *op1, *op2;
+	zval *op1, *op2;
 	zend_bool result;
 
 	SAVE_OPLINE();
@@ -46603,29 +46641,31 @@ static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_IS_NOT_IDENTICAL_SPEC_CV_CV_HA
 compare_values_any_type:
 
 	if (Z_TYPE_P(op1) != Z_TYPE_P(op2)) {
+		/* Only VAR can be indirect */
+		if (UNEXPECTED(((IS_CV & IS_VAR) && Z_TYPE_P(op1) == IS_INDIRECT) || ((IS_CV & IS_VAR) && Z_TYPE_P(op2) == IS_INDIRECT))) {
+			ZVAL_DEINDIRECT(op1);
+			ZVAL_DEINDIRECT(op2);
+			goto compare_values_any_type;
+		}
 		/* Only VAR and CV can be references */
-		if ((IS_CV & (IS_VAR|IS_CV)) || (IS_CV & (IS_VAR|IS_CV))) {
-			if (UNEXPECTED(Z_ISREF_P(op1) || Z_ISREF_P(op2))) {
-				ZVAL_DEREF(op1);
-				ZVAL_DEREF(op2);
-				if (Z_TYPE_P(op1) == Z_TYPE_P(op2)) {
-					goto compare_values;
-				}
+		if (UNEXPECTED(((IS_CV & (IS_VAR|IS_CV)) && Z_ISREF_P(op1)) || ((IS_CV & (IS_VAR|IS_CV)) && Z_ISREF_P(op2)))) {
+			ZVAL_DEREF(op1);
+			ZVAL_DEREF(op2);
+			if (Z_TYPE_P(op1) == Z_TYPE_P(op2)) {
+				goto compare_values;
 			}
 		}
 		/* Only CV can be undef */
-		if ((IS_CV & IS_CV) || (IS_CV & IS_CV)) {
-			if (UNEXPECTED(Z_TYPE_P(op1) == IS_UNDEF || Z_TYPE_P(op2) == IS_UNDEF)) {
-				/* Convert undef to null, check if they're not identical */
-				if (Z_TYPE_P(op1) == IS_UNDEF) {
-					op1 = ZVAL_UNDEFINED_OP1();
-				}
-				if (Z_TYPE_P(op2) == IS_UNDEF) {
-					op2 = ZVAL_UNDEFINED_OP2();
-				}
-				result = Z_TYPE_P(op1) != Z_TYPE_P(op2);
-				goto return_result_maythrow;
+		if (UNEXPECTED(((IS_CV & IS_CV) && Z_ISUNDEF_P(op1)) || ((IS_CV & IS_CV) && Z_ISUNDEF_P(op2)) )) {
+			/* Convert undef to null, check if they're not identical */
+			if (Z_TYPE_P(op1) == IS_UNDEF) {
+				op1 = ZVAL_UNDEFINED_OP1();
 			}
+			if (Z_TYPE_P(op2) == IS_UNDEF) {
+				op2 = ZVAL_UNDEFINED_OP2();
+			}
+			result = Z_TYPE_P(op1) != Z_TYPE_P(op2);
+			goto return_result_maythrow;
 		}
 		/* They are not identical, return true. This has to check for __destruct errors (and undefined variable errors when IS_NULL is possible) */
 
@@ -46635,13 +46675,13 @@ compare_values_any_type:
 	}
 compare_values:
 	if (Z_TYPE_P(op1) <= IS_TRUE) {
-        if (((IS_CV & IS_CV) || (IS_CV & IS_CV)) && UNEXPECTED(Z_TYPE_P(op1) == IS_UNDEF)) {
-            /* They are both undefined - fetch them to emit the undefined variable warnings. */
-            op1 = ZVAL_UNDEFINED_OP1();
-            op2 = ZVAL_UNDEFINED_OP2();
-            ZEND_VM_SMART_BRANCH(0, 1);
-            return;
-        }
+		if (((IS_CV & IS_CV) || (IS_CV & IS_CV)) && UNEXPECTED(Z_TYPE_P(op1) == IS_UNDEF)) {
+			/* They are both undefined - fetch them to emit the undefined variable warnings. */
+			op1 = ZVAL_UNDEFINED_OP1();
+			op2 = ZVAL_UNDEFINED_OP2();
+			ZEND_VM_SMART_BRANCH(0, 1);
+			return;
+		}
 		/* They are identical, return false. */
 		/* This has to check for undefined variable errors when IS_UNDEF is possible. (only warns for IS_CV) */
 
