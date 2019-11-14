@@ -4,8 +4,9 @@ export CFLAGS="-g"
 
 ./buildconf --force
 ./configure \
---prefix=/home/tyson/php-8.0.0-debug-opcache-clean-install \
+--prefix=$HOME/php-8.0.0-debug-opcache-zts-install \
 --enable-phpdbg \
+--enable-zts \
 --enable-debug \
 --enable-fpm \
 --with-pdo-mysql=mysqlnd \
