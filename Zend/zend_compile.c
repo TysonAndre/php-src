@@ -362,6 +362,7 @@ void zend_file_context_begin(zend_file_context *prev_context) /* {{{ */
 	FC(current_namespace) = NULL;
 	FC(in_namespace) = 0;
 	FC(has_bracketed_namespaces) = 0;
+	FC(namespace_id) = 0;
 	FC(declarables).ticks = 0;
 	zend_hash_init(&FC(seen_symbols), 8, NULL, NULL, 0);
 }
@@ -835,6 +836,29 @@ uint32_t zend_add_member_modifier(uint32_t flags, uint32_t new_flag) /* {{{ */
 }
 /* }}} */
 
+zend_string *zend_concat6(char *str1, size_t str1_len, char *str2, size_t str2_len, char *str3, size_t str3_len, char *str4, size_t str4_len, char* str5, size_t str5_len, char* str6, size_t str6_len) /* {{{ */
+{
+	size_t len = str1_len + str2_len + str3_len + str4_len + str5_len + str6_len;
+	zend_string *res = zend_string_alloc(len, 0);
+
+	char* ptr = ZSTR_VAL(res);
+	memcpy(ptr, str1, str1_len);
+	ptr += str1_len;
+	memcpy(ptr, str2, str2_len);
+	ptr += str2_len;
+	memcpy(ptr, str3, str3_len);
+	ptr += str3_len;
+	memcpy(ptr, str4, str4_len);
+	ptr += str4_len;
+	memcpy(ptr, str5, str5_len);
+	ptr += str5_len;
+	memcpy(ptr, str6, str6_len);
+	ptr[str6_len] = '\0';
+
+	return res;
+}
+/* }}} */
+
 zend_string *zend_concat3(char *str1, size_t str1_len, char *str2, size_t str2_len, char *str3, size_t str3_len) /* {{{ */
 {
 	size_t len = str1_len + str2_len + str3_len;
@@ -847,10 +871,27 @@ zend_string *zend_concat3(char *str1, size_t str1_len, char *str2, size_t str2_l
 
 	return res;
 }
+/* }}} */
 
 zend_string *zend_concat_names(char *name1, size_t name1_len, char *name2, size_t name2_len) {
 	return zend_concat3(name1, name1_len, "\\", 1, name2, name2_len);
 }
+
+/* NOTE: Using the \0 byte seems to make tests fail. */
+zend_string *zend_prefix_with_file(zend_string *name) { /* {{{ */
+	zend_string *filename = CG(compiled_filename);
+	zend_string *namespace_id_str = zend_long_to_str(FC(namespace_id));
+	zend_string *result = zend_concat6(
+		"static const ", sizeof("static const ") - 1,
+		ZSTR_VAL(name), ZSTR_LEN(name),
+		" at ", sizeof(" at ") - 1,
+		ZSTR_VAL(filename), ZSTR_LEN(filename),
+		"#", 1,
+		ZSTR_VAL(namespace_id_str), ZSTR_LEN(namespace_id_str));
+	zend_string_release_ex(namespace_id_str, 0);
+	return result;
+}
+/* }}} */
 
 zend_string *zend_prefix_with_ns(zend_string *name) {
 	if (FC(current_namespace)) {
@@ -6947,6 +6988,93 @@ void zend_compile_const_decl(zend_ast *ast) /* {{{ */
 }
 /* }}}*/
 
+void zend_compile_static_const_elem(zend_ast *const_ast) { /* {{{ */
+	zend_ast *name_ast = const_ast->child[0];
+	zend_ast *value_ast = const_ast->child[1];
+	zend_string *unqualified_name = zend_ast_get_str(name_ast);
+
+	zend_string *name;
+	if (zend_get_special_const(ZSTR_VAL(unqualified_name), ZSTR_LEN(unqualified_name))) {
+		zend_error_noreturn(E_COMPILE_ERROR,
+			"Cannot redeclare static constant '%s'", ZSTR_VAL(unqualified_name));
+	}
+
+	// "static const" lasts for the life of a namespace block.
+	name = zend_prefix_with_file(unqualified_name);
+	name = zend_new_interned_string(name);
+
+	if (!zend_hash_add_ptr(zend_get_import_ht(ZEND_SYMBOL_CONST), unqualified_name, name)) {
+		zend_error_noreturn(E_COMPILE_ERROR, "Cannot declare static const %s because "
+			"the name is already in use", ZSTR_VAL(unqualified_name));
+	}
+	zend_eval_const_expr(&value_ast);
+
+	/* 0. Check if it can be evaluated at compile time. */
+	if (value_ast->kind != ZEND_AST_ZVAL) {
+		/*
+		 * This is a dynamic expression, and could not be evaluated with the information available while compiling the file.
+		 * 1. JMPNZ if defined('UNIQUE_CONST_NAME')
+		 * 2. Call define('UNIQUE_CONST_NAME', $dynamicValue)
+		 * 3. update target of JMPNZ
+		 */
+		uint32_t opnum_jmpz;
+		znode defined_opline_result;
+		zend_op *defined_opline;
+		// TODO: Skip emitting the DEFINED and just emit DECLARE_CONST directly
+		// if this can be determined at compile time.
+		defined_opline = zend_emit_op_tmp(&defined_opline_result, ZEND_DEFINED, NULL, NULL);
+		defined_opline->op1_type = IS_CONST;
+		LITERAL_STR(defined_opline->op1, name);
+		defined_opline->extended_value = zend_alloc_cache_slot();
+
+		opnum_jmpz = zend_emit_cond_jump(ZEND_JMPNZ, &defined_opline_result, 0);
+
+		{
+			/* Generate the AST for a call to define('GLOBAL_UNIQUE_CONST', $dynamic) and compile it. */
+			zend_ast *define_name_ast;
+			zend_ast *define_call_ast;
+			zend_ast *args_ast;
+			zend_string *define_str = zend_new_interned_string(zend_string_init("define", 6, 0));
+
+			define_name_ast = zend_ast_create_zval_from_str(define_str);
+			define_name_ast->attr = ZEND_NAME_FQ;
+			args_ast = zend_ast_create_list(2, ZEND_AST_ARG_LIST, zend_ast_create_zval_from_str(name), value_ast);
+			define_call_ast = zend_ast_create(ZEND_AST_CALL, define_name_ast, args_ast);
+
+			zend_compile_expr(NULL, define_call_ast);
+			/* Temporary ASTs get freed when the arena is freed */
+		}
+		zend_update_jump_target_to_next(opnum_jmpz);
+	} else {
+		/* This expression can be evaluated at compile time */
+		znode name_node, value_node;
+		zval *value_zv = &value_node.u.constant;
+
+		value_node.op_type = IS_CONST;
+
+		zend_const_expr_to_zval(value_zv, value_ast);
+		zend_string_addref(name);
+
+		name_node.op_type = IS_CONST;
+		ZVAL_STR(&name_node.u.constant, name);
+
+		zend_emit_op(NULL, ZEND_DECLARE_CONST, &name_node, &value_node);
+	}
+
+	zend_register_seen_symbol(name, ZEND_SYMBOL_CONST);
+}
+/* }}} */
+
+void zend_compile_static_const_decl(zend_ast *ast) /* {{{ */
+{
+	zend_ast_list *list = zend_ast_get_list(ast);
+	uint32_t i;
+	for (i = 0; i < list->children; ++i) {
+		zend_compile_static_const_elem(list->child[i]);
+	}
+}
+/* }}}*/
+
 void zend_compile_namespace(zend_ast *ast) /* {{{ */
 {
 	zend_ast *name_ast = ast->child[0];
@@ -7011,6 +7139,7 @@ void zend_compile_namespace(zend_ast *ast) /* {{{ */
 	if (with_bracket) {
 		FC(has_bracketed_namespaces) = 1;
 	}
+	FC(namespace_id)++;
 
 	if (stmt_ast) {
 		zend_compile_top_stmt(stmt_ast);
@@ -8705,6 +8834,9 @@ void zend_compile_stmt(zend_ast *ast) /* {{{ */
 			break;
 		case ZEND_AST_CONST_DECL:
 			zend_compile_const_decl(ast);
+			break;
+		case ZEND_AST_STATIC_CONST_DECL:
+			zend_compile_static_const_decl(ast);
 			break;
 		case ZEND_AST_NAMESPACE:
 			zend_compile_namespace(ast);
