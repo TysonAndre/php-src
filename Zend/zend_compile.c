@@ -8521,7 +8521,9 @@ void zend_compile_const_expr(zend_ast **ast_ptr) /* {{{ */
 	}
 
 	if (!zend_is_allowed_in_const_expr(ast->kind)) {
-		zend_error_noreturn(E_COMPILE_ERROR, "Constant expression contains invalid operations");
+		if (ast->kind != ZEND_AST_ARG_LIST && ast->kind != ZEND_AST_CALL) {
+			zend_error_noreturn(E_COMPILE_ERROR, "Constant expression contains invalid operations");
+		}
 	}
 
 	switch (ast->kind) {
@@ -8537,6 +8539,27 @@ void zend_compile_const_expr(zend_ast **ast_ptr) /* {{{ */
 		case ZEND_AST_MAGIC_CONST:
 			zend_compile_const_expr_magic_const(ast_ptr);
 			break;
+		case ZEND_AST_CALL:
+		{
+			zend_bool is_fully_qualified;
+			zval *original_zv;
+			zend_string *original_name;
+			zend_string *resolved_name;
+			zend_ast *func_name_ast = ast->child[0];
+			if (func_name_ast->kind != ZEND_AST_ZVAL || Z_TYPE_P(zend_ast_get_zval(func_name_ast)) != IS_STRING) {
+				zend_error_noreturn(E_COMPILE_ERROR, "Constant expression contains invalid name for function call");
+			}
+			original_zv = zend_ast_get_zval(func_name_ast);
+			original_name = Z_STR_P(original_zv);
+			resolved_name = zend_resolve_function_name(original_name, func_name_ast->attr, &is_fully_qualified);
+			// fprintf(stderr, "original_name=%s resolved_name=%s attr=%d is_fully_qualified=%d\n", ZSTR_VAL(original_name), ZSTR_VAL(resolved_name), (int)ast->child[0]->attr, (int)is_fully_qualified);
+			Z_STR_P(original_zv) = resolved_name;
+			zend_string_release(original_name);
+			func_name_ast->attr = is_fully_qualified ? ZEND_NAME_FQ : ZEND_NAME_NOT_FQ;
+
+			zend_ast_apply(ast->child[1], zend_compile_const_expr);
+			break;
+		}
 		default:
 			zend_ast_apply(ast, zend_compile_const_expr);
 			break;
