@@ -19,11 +19,15 @@
 
 #include "zend_ast.h"
 #include "zend_API.h"
+#include "zend_builtin_functions.h"
 #include "zend_operators.h"
 #include "zend_language_parser.h"
 #include "zend_smart_str.h"
 #include "zend_exceptions.h"
 #include "zend_constants.h"
+
+/* Protection from recursive self-referencing class constants */
+#define IS_CONSTANT_VISITED_MARK    0x80
 
 ZEND_API zend_ast_process_t zend_ast_process = NULL;
 
@@ -473,6 +477,37 @@ static int zend_ast_add_unpacked_element(zval *result, zval *expr) {
 	return FAILURE;
 }
 
+static int validate_constant_array_or_throw(HashTable *ht) /* {{{ */
+{
+	int ret = 1;
+	zval *val;
+
+	GC_PROTECT_RECURSION(ht);
+	ZEND_HASH_FOREACH_VAL_IND(ht, val) {
+		ZVAL_DEREF(val);
+		if (Z_REFCOUNTED_P(val)) {
+			if (Z_TYPE_P(val) == IS_ARRAY) {
+				if (Z_REFCOUNTED_P(val)) {
+					if (Z_IS_RECURSIVE_P(val)) {
+						zend_throw_error(NULL, "Calls in constants cannot be recursive arrays");
+						ret = 0;
+						break;
+					} else if (!validate_constant_array_or_throw(Z_ARRVAL_P(val))) {
+						ret = 0;
+						break;
+					}
+				}
+			} else if (Z_TYPE_P(val) != IS_STRING && Z_TYPE_P(val) != IS_RESOURCE) {
+				zend_throw_error(NULL, "Calls in constants may only evaluate to scalar values, arrays or resources");
+				ret = 0;
+				break;
+			}
+		}
+	} ZEND_HASH_FOREACH_END();
+	GC_UNPROTECT_RECURSION(ht);
+	return ret;
+}
+/* }}} */
 ZEND_API int ZEND_FASTCALL zend_ast_evaluate(zval *result, zend_ast *ast, zend_class_entry *scope)
 {
 	zval op1, op2;
@@ -720,6 +755,107 @@ ZEND_API int ZEND_FASTCALL zend_ast_evaluate(zval *result, zend_ast *ast, zend_c
 				zval_ptr_dtor_nogc(&op2);
 			}
 			break;
+		case ZEND_AST_CALL:
+		{
+			uint32_t i, j, arg_count;
+			zend_string *fname;
+			zval *func;
+			zval *func_name;
+			zend_ast_list *arg_list_ast;
+
+			zval *args;
+			if (ast->child[0]->kind != ZEND_AST_ZVAL || Z_TYPE_P(zend_ast_get_zval(ast->child[0])) != IS_STRING) {
+				/* Impossible */
+				zend_throw_error(NULL, "Unsupported constant expression for function call name");
+				return FAILURE;
+			}
+			func_name = zend_ast_get_zval(ast->child[0]);
+			fname = Z_STR_P(func_name);
+			arg_list_ast = zend_ast_get_list(ast->child[1]);
+			arg_count = arg_list_ast->children;
+			args = emalloc(arg_count * sizeof(zval));
+
+			for (i = 0; i < arg_list_ast->children; i++) {
+				zend_ast *elem = arg_list_ast->child[i];
+				// fprintf(stderr, "elem->kind=%d\n", (int)elem->kind);
+				if (elem->kind == ZEND_AST_UNPACK) {
+					zend_throw_error(NULL, "Unsupported constant expression for function call name");
+					goto call_failure;
+				}
+				// XXX what is the scope
+				if (UNEXPECTED(zend_ast_evaluate(&args[i], elem, scope) != SUCCESS)) {
+call_failure:
+					for (j = 0; j < i; j++) {
+						zval_ptr_dtor_nogc(&args[j]);
+					}
+					efree(args);
+					return FAILURE;
+				}
+			}
+			/* Based on INIT_FCALL - TODO: Any issues with the backtrace varying based on when this gets used? */
+			func = zend_hash_find(EG(function_table), fname);
+			// fprintf(stderr, "Going to call %s()\n", ZSTR_VAL(fname));
+			if (UNEXPECTED(func == NULL)) {
+				zend_throw_error(NULL, "Call to undefined function %s()", ZSTR_VAL(fname));
+			} else {
+				zval result_copy;
+				if (ast->attr & IS_CONSTANT_VISITED_MARK) {
+					/* XXX should there be a way to recover from this error? */
+					/* XXX PHP converts constants with errors to null? */
+					zend_throw_error(NULL, "Unrecoverable error calling %s() in recursive constant definition", ZSTR_VAL(fname));
+					return FAILURE;
+				}
+				ast->attr |= IS_CONSTANT_VISITED_MARK;
+
+				ret = call_user_function(CG(function_table), NULL, func_name, &result_copy, arg_count, args);
+				if (EG(exception)) {
+					ret = FAILURE;
+				}
+				ast->attr &= ~IS_CONSTANT_VISITED_MARK;
+
+				if (ret != FAILURE) {
+					switch (Z_TYPE(result_copy)) {
+						case IS_LONG:
+						case IS_DOUBLE:
+						case IS_STRING:
+						case IS_FALSE:
+						case IS_TRUE:
+						case IS_NULL:
+						case IS_RESOURCE:
+							*result = result_copy;
+							break;
+						case IS_ARRAY:
+							if (Z_REFCOUNTED_P(&result_copy)) {
+								if (!validate_constant_array_or_throw(Z_ARRVAL(result_copy))) {
+									ret = FAILURE;
+								} else {
+									/* Recursively copy arrays and replace references with values */
+									copy_constant_array(result, &result_copy);
+									zval_ptr_dtor(&result_copy);
+								}
+							} else {
+								*result = result_copy;
+							}
+							break;
+						default:
+							zend_throw_error(NULL, "Calls in constants may only evaluate to scalar values, arrays or resources");
+							ret = FAILURE;
+							break;
+					}
+				}
+				if (ret == FAILURE) {
+					zval_ptr_dtor_nogc(&result_copy);
+				}
+				// fprintf(stderr, "retval=%d, Z_TYPE_P(result)=%d", (int)ret, (int)Z_TYPE_P(result));
+			}
+			for (j = 0; j < arg_count; j++) {
+				zval_ptr_dtor_nogc(&args[j]);
+			}
+			efree(args);
+			ast->attr &= ~IS_CONSTANT_VISITED_MARK;
+			// FIXME validate that the result is a constant AST and throw if it isn't.
+			break;
+		}
 		default:
 			zend_throw_error(NULL, "Unsupported constant expression");
 			ret = FAILURE;

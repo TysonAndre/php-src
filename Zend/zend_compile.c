@@ -8521,7 +8521,10 @@ void zend_compile_const_expr(zend_ast **ast_ptr) /* {{{ */
 	}
 
 	if (!zend_is_allowed_in_const_expr(ast->kind)) {
-		zend_error_noreturn(E_COMPILE_ERROR, "Constant expression contains invalid operations");
+		if (ast->kind != ZEND_AST_ARG_LIST &&
+				(ast->kind != ZEND_AST_CALL || (ast->child[0]->kind != ZEND_AST_ZVAL || Z_TYPE_P(zend_ast_get_zval(ast->child[0])) != IS_STRING))) {
+			zend_error_noreturn(E_COMPILE_ERROR, "Constant expression contains invalid operations");
+		}
 	}
 
 	switch (ast->kind) {
