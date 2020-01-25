@@ -26,9 +26,6 @@
 #include "zend_exceptions.h"
 #include "zend_constants.h"
 
-/* Protection from recursive self-referencing class constants */
-#define IS_CONSTANT_VISITED_MARK    0x80
-
 ZEND_API zend_ast_process_t zend_ast_process = NULL;
 
 static inline void *zend_ast_alloc(size_t size) {
@@ -799,19 +796,20 @@ call_failure:
 				zend_throw_error(NULL, "Call to undefined function %s()", ZSTR_VAL(fname));
 			} else {
 				zval result_copy;
-				if (ast->attr & IS_CONSTANT_VISITED_MARK) {
+				/* TODO: Handle case where pointers are longer than zend_ulong */
+				/* NOTE: This uses a hash table because cannot and shouldn't modify the bytes of ast when opcache is enabled - the memory is protected */
+				if (zend_hash_index_add_ptr(CG(active_calls_in_constants), (zend_ulong) ast, ast) == NULL) {
 					/* XXX should there be a way to recover from this error? */
 					/* XXX PHP converts constants with errors to null? */
 					zend_throw_error(NULL, "Unrecoverable error calling %s() in recursive constant definition", ZSTR_VAL(fname));
 					return FAILURE;
 				}
-				ast->attr |= IS_CONSTANT_VISITED_MARK;
 
 				ret = call_user_function(CG(function_table), NULL, func_name, &result_copy, arg_count, args);
 				if (EG(exception)) {
 					ret = FAILURE;
 				}
-				ast->attr &= ~IS_CONSTANT_VISITED_MARK;
+				zend_hash_index_del(CG(active_calls_in_constants), (zend_ulong) ast);
 
 				if (ret != FAILURE) {
 					switch (Z_TYPE(result_copy)) {
@@ -852,7 +850,6 @@ call_failure:
 				zval_ptr_dtor_nogc(&args[j]);
 			}
 			efree(args);
-			ast->attr &= ~IS_CONSTANT_VISITED_MARK;
 			// FIXME validate that the result is a constant AST and throw if it isn't.
 			break;
 		}

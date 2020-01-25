@@ -101,6 +101,7 @@ void clean_module_constants(int module_number)
 
 int zend_startup_constants(void)
 {
+	fprintf(stderr, "In zend_startup_constants\n");
 	EG(zend_constants) = (HashTable *) malloc(sizeof(HashTable));
 	zend_hash_init(EG(zend_constants), 128, NULL, ZEND_CONSTANT_DTOR, 1);
 	return SUCCESS;
@@ -148,6 +149,7 @@ int zend_shutdown_constants(void)
 {
 	zend_hash_destroy(EG(zend_constants));
 	free(EG(zend_constants));
+
 	return SUCCESS;
 }
 
