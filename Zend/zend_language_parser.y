@@ -245,7 +245,7 @@ static YYSIZE_T zend_yytnamerr(char*, const char*);
 %type <ast> fully_dereferencable array_object_dereferencable
 %type <ast> callable_expr callable_variable static_member new_variable
 %type <ast> encaps_var encaps_var_offset isset_variables
-%type <ast> top_statement_list use_declarations const_list inner_statement_list if_stmt
+%type <ast> top_statement_list use_declarations const_list static_const_list inner_statement_list if_stmt
 %type <ast> alt_if_stmt for_exprs switch_case_list global_var_list static_var_list
 %type <ast> echo_expr_list unset_variables catch_name_list catch_list parameter_list class_statement_list
 %type <ast> implements_list case_list if_stmt_without_else
@@ -335,6 +335,7 @@ top_statement:
 	|	T_USE use_declarations ';'					{ $$ = $2; $$->attr = ZEND_SYMBOL_CLASS; }
 	|	T_USE use_type use_declarations ';'			{ $$ = $3; $$->attr = $2; }
 	|	T_CONST const_list ';'						{ $$ = $2; }
+	|	T_STATIC T_CONST static_const_list ';'		{ $$ = $3; }
 ;
 
 use_type:
@@ -402,6 +403,11 @@ use_declaration:
 const_list:
 		const_list ',' const_decl { $$ = zend_ast_list_add($1, $3); }
 	|	const_decl { $$ = zend_ast_create_list(1, ZEND_AST_CONST_DECL, $1); }
+;
+
+static_const_list:
+		static_const_list ',' const_decl { $$ = zend_ast_list_add($1, $3); }
+	|	const_decl { $$ = zend_ast_create_list(1, ZEND_AST_STATIC_CONST_DECL, $1); }
 ;
 
 inner_statement_list:

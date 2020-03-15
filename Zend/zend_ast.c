@@ -1539,6 +1539,7 @@ simple_list:
 
 		case ZEND_AST_CONST_DECL:
 		case ZEND_AST_CLASS_CONST_DECL:
+		case ZEND_AST_STATIC_CONST_DECL:
 			smart_str_appends(str, "const ");
 			goto simple_list;
 		case ZEND_AST_NAME_LIST:

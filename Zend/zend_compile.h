@@ -115,6 +115,7 @@ typedef struct _zend_file_context {
 	HashTable *imports_const;
 
 	HashTable seen_symbols;
+	zend_long namespace_id;
 } zend_file_context;
 
 typedef union _zend_parser_stack_elem {
