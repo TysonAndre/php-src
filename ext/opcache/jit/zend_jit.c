@@ -2119,7 +2119,9 @@ static int zend_jit(const zend_op_array *op_array, zend_ssa *ssa, const zend_op 
 			  && ssa->cfg.blocks[b].start != 0
 			  && (op_array->opcodes[ssa->cfg.blocks[b].start - 1].opcode == ZEND_NOP
 			   || op_array->opcodes[ssa->cfg.blocks[b].start - 1].opcode == ZEND_SWITCH_LONG
-			   || op_array->opcodes[ssa->cfg.blocks[b].start - 1].opcode == ZEND_SWITCH_STRING)) {
+			   || op_array->opcodes[ssa->cfg.blocks[b].start - 1].opcode == ZEND_SWITCH_STRING
+			   || op_array->opcodes[ssa->cfg.blocks[b].start - 1].opcode == ZEND_MATCH_LONG
+			   || op_array->opcodes[ssa->cfg.blocks[b].start - 1].opcode == ZEND_MATCH_STRING)) {
 				if (!zend_jit_reset_opline(&dasm_state, op_array->opcodes + ssa->cfg.blocks[b].start)
 				 || !zend_jit_set_valid_ip(&dasm_state, op_array->opcodes + ssa->cfg.blocks[b].start)) {
 					goto jit_failure;
@@ -2850,6 +2852,8 @@ static int zend_jit(const zend_op_array *op_array, zend_ssa *ssa, const zend_op 
 						goto done;
 					case ZEND_SWITCH_LONG:
 					case ZEND_SWITCH_STRING:
+					case ZEND_MATCH_LONG:
+					case ZEND_MATCH_STRING:
 						if (!zend_jit_switch(&dasm_state, opline, op_array, ssa)) {
 							goto jit_failure;
 						}
@@ -2897,6 +2901,8 @@ static int zend_jit(const zend_op_array *op_array, zend_ssa *ssa, const zend_op 
 				case ZEND_OP_DATA:
 				case ZEND_SWITCH_LONG:
 				case ZEND_SWITCH_STRING:
+				case ZEND_MATCH_LONG:
+				case ZEND_MATCH_STRING:
 					break;
 				case ZEND_JMP:
 					if (JIT_G(opt_level) < ZEND_JIT_LEVEL_INLINE) {

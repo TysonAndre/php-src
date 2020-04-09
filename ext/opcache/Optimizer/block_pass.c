@@ -115,6 +115,11 @@ static int get_const_switch_target(zend_cfg *cfg, zend_op_array *op_array, zend_
 		/* fallback to next block */
 		return block->successors[block->successors_count - 1];
 	}
+	if ((opline->opcode == ZEND_MATCH_LONG && Z_TYPE_P(val) != IS_LONG)
+			|| (opline->opcode == ZEND_MATCH_STRING && Z_TYPE_P(val) != IS_STRING)) {
+		/* always jump to the default arm */
+		return block->successors[block->successors_count - 2];
+	}
 	if (Z_TYPE_P(val) == IS_LONG) {
 		zv = zend_hash_index_find(jumptable, Z_LVAL_P(val));
 	} else {
@@ -369,6 +374,8 @@ static void zend_optimize_block(zend_basic_block *block, zend_op_array *op_array
 
 			case ZEND_SWITCH_LONG:
 			case ZEND_SWITCH_STRING:
+			case ZEND_MATCH_LONG:
+			case ZEND_MATCH_STRING:
 				if (opline->op1_type & (IS_TMP_VAR|IS_VAR)) {
 					/* SWITCH variable will be deleted later by FREE, so we can't optimize it */
 					Tsource[VAR_NUM(opline->op1.var)] = NULL;
@@ -1046,6 +1053,8 @@ static void assemble_code_blocks(zend_cfg *cfg, zend_op_array *op_array, zend_op
 				break;
 			case ZEND_SWITCH_LONG:
 			case ZEND_SWITCH_STRING:
+			case ZEND_MATCH_LONG:
+			case ZEND_MATCH_STRING:
 			{
 				HashTable *jumptable = Z_ARRVAL(ZEND_OP2_LITERAL(opline));
 				zval *zv;
