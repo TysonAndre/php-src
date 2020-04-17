@@ -879,7 +879,22 @@ static void php_var_serialize_nested_data(smart_str *buf, zval *struc, HashTable
 		zval *data;
 		zend_ulong index;
 
-		ZEND_HASH_FOREACH_KEY_VAL_IND(ht, index, key, data) {
+		ZEND_HASH_FOREACH_KEY_VAL(ht, index, key, data) {
+			if (Z_TYPE_P(data) == IS_INDIRECT) {
+				data = Z_INDIRECT_P(data);
+			}
+			if (UNEXPECTED(Z_TYPE_P(data) == IS_UNDEF)) {
+				if (Z_TYPE_P(struc) != IS_OBJECT) {
+					continue;
+				}
+				if (!key) {
+					php_var_serialize_long(buf, index);
+				} else {
+					php_var_serialize_string(buf, ZSTR_VAL(key), ZSTR_LEN(key));
+				}
+				smart_str_appendl(buf, "U;", 2);
+				continue;
+			}
 			if (incomplete_class && strcmp(ZSTR_VAL(key), MAGIC_MEMBER) == 0) {
 				continue;
 			}
@@ -1013,7 +1028,20 @@ again:
 					php_var_serialize_class_name(buf, &obj);
 					smart_str_append_unsigned(buf, zend_array_count(Z_ARRVAL(retval)));
 					smart_str_appendl(buf, ":{", 2);
-					ZEND_HASH_FOREACH_KEY_VAL_IND(Z_ARRVAL(retval), index, key, data) {
+					ZEND_HASH_FOREACH_KEY_VAL(Z_ARRVAL(retval), index, key, data) {
+						if (Z_TYPE_P(_z) == IS_INDIRECT) {
+							_z = Z_INDIRECT_P(_z);
+						}
+						if (UNEXPECTED(Z_TYPE_P(_z) == IS_UNDEF)) {
+							// TODO: Only do this if different from the default?
+							if (!key) {
+								php_var_serialize_long(buf, index);
+							} else {
+								php_var_serialize_string(buf, ZSTR_VAL(key), ZSTR_LEN(key));
+							}
+							smart_str_appendl(buf, "U;", 2);
+							continue;
+						}
 						if (!key) {
 							php_var_serialize_long(buf, index);
 						} else {
@@ -1087,10 +1115,11 @@ again:
 				myht = zend_get_properties_for(struc, ZEND_PROP_PURPOSE_SERIALIZE);
 				/* count after serializing name, since php_var_serialize_class_name
 				 * changes the count if the variable is incomplete class */
-				count = zend_array_count(myht);
+				count = zend_hash_num_elements(myht);
 				if (count > 0 && incomplete_class) {
 					--count;
 				}
+				// Need to call a different helper from zend_array_count, I guess.
 				php_var_serialize_nested_data(buf, struc, myht, count, incomplete_class, var_hash);
 				zend_release_properties(myht);
 				return;
