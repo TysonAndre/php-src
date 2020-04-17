@@ -593,21 +593,31 @@ string_key:
 				goto failure;
 			}
 		}
+		// TODO: Assert `d` is not IS_UNDEF
+		// Delete the created property if needed.
 
 		if (!php_var_unserialize_internal(data, p, max, var_hash, 0)) {
 			zval_ptr_dtor(&key);
 			goto failure;
 		}
-
-		if (UNEXPECTED(info)) {
-			if (!zend_verify_prop_assignable_by_ref(info, data, /* strict */ 1)) {
-				zval_ptr_dtor(data);
-				ZVAL_UNDEF(data);
-				zval_dtor(&key);
+		if (UNEXPECTED(Z_TYPE_P(data) == IS_UNDEF)) {
+			if (UNEXPECTED(!obj)) {
+				zend_error(E_WARNING, "Cannot unserialize undefined value in an array");
 				goto failure;
 			}
-			if (Z_ISREF_P(data)) {
-				ZEND_REF_ADD_TYPE_SOURCE(Z_REF_P(data), info);
+			// Don't perform type checks if this is undefined
+			// FIXME delete the newly set property if it isn't a declared property
+		} else {
+			if (UNEXPECTED(info)) {
+				if (!zend_verify_prop_assignable_by_ref(info, data, /* strict */ 1)) {
+					zval_ptr_dtor(data);
+					ZVAL_UNDEF(data);
+					zval_dtor(&key);
+					goto failure;
+				}
+				if (Z_ISREF_P(data)) {
+					ZEND_REF_ADD_TYPE_SOURCE(Z_REF_P(data), info);
+				}
 			}
 		}
 
@@ -849,6 +859,12 @@ static int php_var_unserialize_internal(UNSERIALIZE_PARAMETER, int as_key)
 "N;"	{
 	*p = YYCURSOR;
 	ZVAL_NULL(rval);
+	return 1;
+}
+
+"U;"	{
+	*p = YYCURSOR;
+	ZVAL_UNDEF(rval);
 	return 1;
 }
 
