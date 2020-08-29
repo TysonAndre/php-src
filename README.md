@@ -1,3 +1,28 @@
+# LISP-Imitating Syntax for PHP
+
+Notes:
+
+- This may end up breaking assumptions made by opcache and be unsafe.
+- This is not going to be fully featured
+- This combines the parenthesis of lisp with the behavior of php.
+
+  Writing parsers becomes easier and operator precedence is no longer important
+- This may be a useful reference point for writing DSLs extending PHP
+  or for trying to add new syntax to php.
+
+## Supported features
+
+- `(print expr)`, `(echo expr1 expr2)`
+- Variables `(= $var expr)`
+- Some unary and binary operators
+- Support reading and writing constants as `(const name expr)`
+- Add `(if cond truestmt falsestmt)` statements
+- Support `(while cond stmts)` statements
+- Support `(do stmt1 stmt2)` for statement lists
+- Support function calls `(name_or_var arg1 arg2)`
+
+See [Zend/tests/lisp](Zend/tests/lisp) for examples.
+
 <div align="center">
     <a href="https://php.net">
         <img

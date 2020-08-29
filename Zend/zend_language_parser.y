@@ -218,6 +218,8 @@ static YYSIZE_T zend_yytnamerr(char*, const char*);
 %token T_DOC_COMMENT     "doc comment"
 %token T_OPEN_TAG        "open tag"
 %token T_OPEN_TAG_WITH_ECHO "'<?='"
+%token T_LISP_START      "'(?lisp'"
+%token T_LISP_END        "'?)'"
 %token T_CLOSE_TAG       "'?>'"
 %token T_WHITESPACE      "whitespace"
 %token T_START_HEREDOC   "heredoc start"
@@ -268,6 +270,10 @@ static YYSIZE_T zend_yytnamerr(char*, const char*);
 %type <ast> attributed_statement attributed_class_statement attributed_parameter
 %type <ast> attribute_decl attribute attributes namespace_declaration_name
 %type <ast> match match_arm_list non_empty_match_arm_list match_arm match_arm_cond_list
+%type <ast> lisp_scalar lisp_expr lisp_dereferenceable_expr lisp_top_statement lisp_top_statement_list lisp_statement lisp_statement_list
+%type <ast> lisp_echo_expr lisp_echo_expr_list lisp_const_list lisp_const_decl
+%type <ast> lisp_if_stmt lisp_while_stmt
+%type <ast> lisp_argument_list lisp_non_empty_argument_list lisp_argument lisp_function_call lisp_callable_expr
 
 %type <num> returns_ref function fn is_reference is_variadic variable_modifiers
 %type <num> method_modifiers non_empty_member_modifiers member_modifier optional_visibility_modifier
@@ -487,6 +493,7 @@ statement:
 	|	T_STATIC static_var_list ';'	{ $$ = $2; }
 	|	T_ECHO echo_expr_list ';'		{ $$ = $2; }
 	|	T_INLINE_HTML { $$ = zend_ast_create(ZEND_AST_ECHO, $1); }
+	|   T_LISP_START lisp_top_statement_list T_LISP_END	{ $$ = $2; }
 	|	expr ';' { $$ = $1; }
 	|	T_UNSET '(' unset_variables possible_comma ')' ';' { $$ = $3; }
 	|	T_FOREACH '(' expr T_AS foreach_variable ')' foreach_statement
@@ -1462,6 +1469,169 @@ isset_variables:
 
 isset_variable:
 		expr { $$ = zend_ast_create(ZEND_AST_ISSET, $1); }
+;
+
+lisp_top_statement_list:
+		lisp_top_statement_list lisp_top_statement { $$ = zend_ast_list_add($1, $2); }
+	|	%empty { $$ = zend_ast_create_list(0, ZEND_AST_STMT_LIST); }
+;
+
+lisp_top_statement:
+	lisp_statement { $$ = $1; }
+;
+
+lisp_statement_list:
+		lisp_statement_list lisp_statement { $$ = zend_ast_list_add($1, $2); }
+	|	%empty { $$ = zend_ast_create_list(0, ZEND_AST_STMT_LIST); }
+;
+
+lisp_statement:
+		lisp_expr { $$ = $1; }
+	|	'(' T_ECHO lisp_echo_expr_list ')'  { $$ = $3; }
+	|	'(' T_CONST lisp_const_list ')'  { $$ = $3; }
+	|	'(' T_DO lisp_statement_list ')'  { $$ = $3; }
+	|	lisp_if_stmt { $$ = $1; }
+	|	lisp_while_stmt { $$ = $1; }
+;
+
+lisp_const_list:
+		lisp_const_list lisp_const_decl { $$ = zend_ast_list_add($1, $2); }
+	|	lisp_const_decl { $$ = zend_ast_create_list(1, ZEND_AST_CONST_DECL, $1); }
+;
+
+lisp_const_decl:
+	T_STRING lisp_expr backup_doc_comment { $$ = zend_ast_create(ZEND_AST_CONST_ELEM, $1, $2, ($3 ? zend_ast_create_zval_from_str($3) : NULL)); }
+;
+
+lisp_dereferenceable_expr:
+		T_VARIABLE			{ $$ = zend_ast_create(ZEND_AST_VAR, $1); }
+;
+
+lisp_echo_expr_list:
+		lisp_echo_expr_list lisp_echo_expr { $$ = zend_ast_list_add($1, $2); }
+	|	lisp_echo_expr { $$ = zend_ast_create_list(1, ZEND_AST_STMT_LIST, $1); }
+;
+
+lisp_echo_expr:
+	lisp_expr { $$ = zend_ast_create(ZEND_AST_ECHO, $1); }
+;
+
+lisp_expr:
+	 	'(' T_PRINT lisp_expr ')'  { $$ = zend_ast_create(ZEND_AST_PRINT, $3); }
+	|	lisp_scalar { $$ = $1; }
+	|	lisp_dereferenceable_expr { $$ = $1; }
+	|	lisp_function_call { $$ = $1; }
+	// $ordinaryVar
+
+	// Assignments
+	|	'(' '=' lisp_dereferenceable_expr lisp_expr ')'
+			{ $$ = zend_ast_create(ZEND_AST_ASSIGN, $3, $4); }
+	|	'(' '=' '&' lisp_dereferenceable_expr lisp_expr ')'
+			{ $$ = zend_ast_create(ZEND_AST_ASSIGN_REF, $4, $5); }
+
+	// Unary operators
+	|	'(' '+' lisp_expr ')' { $$ = zend_ast_create(ZEND_AST_UNARY_PLUS, $3); }
+	|	'(' '-' lisp_expr ')' { $$ = zend_ast_create(ZEND_AST_UNARY_MINUS, $3); }
+	|	'(' '!' lisp_expr ')' { $$ = zend_ast_create_ex(ZEND_AST_UNARY_OP, ZEND_BOOL_NOT, $3); }
+	|	'(' '~' lisp_expr ')' { $$ = zend_ast_create_ex(ZEND_AST_UNARY_OP, ZEND_BW_NOT, $3); }
+	|	'(' T_INC lisp_dereferenceable_expr ')' { $$ = zend_ast_create(ZEND_AST_PRE_INC, $3); }
+	|	'(' T_DEC lisp_dereferenceable_expr ')' { $$ = zend_ast_create(ZEND_AST_PRE_DEC, $3); }
+	// Binary operators
+	|	'(' '|' lisp_expr lisp_expr ')'	{ $$ = zend_ast_create_binary_op(ZEND_BW_OR, $3, $4); }
+	|	'(' '&' lisp_expr lisp_expr ')'	{ $$ = zend_ast_create_binary_op(ZEND_BW_AND, $3, $4); }
+	|	'(' '^' lisp_expr lisp_expr ')'	{ $$ = zend_ast_create_binary_op(ZEND_BW_XOR, $3, $4); }
+	|	'(' '.' lisp_expr lisp_expr ')' 	{ $$ = zend_ast_create_binary_op(ZEND_CONCAT, $3, $4); }
+	|	'(' '+' lisp_expr lisp_expr ')' 	{ $$ = zend_ast_create_binary_op(ZEND_ADD, $3, $4); }
+	|	'(' '-' lisp_expr lisp_expr ')' 	{ $$ = zend_ast_create_binary_op(ZEND_SUB, $3, $4); }
+	|	'(' '*' lisp_expr lisp_expr ')'	{ $$ = zend_ast_create_binary_op(ZEND_MUL, $3, $4); }
+	|	'(' T_POW lisp_expr lisp_expr ')'	{ $$ = zend_ast_create_binary_op(ZEND_POW, $3, $4); }
+	|	'(' '/' lisp_expr lisp_expr ')'	{ $$ = zend_ast_create_binary_op(ZEND_DIV, $3, $4); }
+	|	'(' '%' lisp_expr lisp_expr ')' 	{ $$ = zend_ast_create_binary_op(ZEND_MOD, $3, $4); }
+	| 	'(' T_SL lisp_expr lisp_expr ')'	{ $$ = zend_ast_create_binary_op(ZEND_SL, $3, $4); }
+	|	'(' T_SR lisp_expr lisp_expr ')'	{ $$ = zend_ast_create_binary_op(ZEND_SR, $3, $4); }
+
+	|	'(' T_BOOLEAN_OR lisp_expr lisp_expr ')'	{ $$ = zend_ast_create_binary_op(ZEND_AST_OR, $3, $4); }
+	|	'(' T_BOOLEAN_AND lisp_expr lisp_expr ')'	{ $$ = zend_ast_create_binary_op(ZEND_AST_AND, $3, $4); }
+	|	'(' T_LOGICAL_OR lisp_expr lisp_expr ')'	{ $$ = zend_ast_create_binary_op(ZEND_AST_OR, $3, $4); }
+	|	'(' T_LOGICAL_AND lisp_expr lisp_expr ')'	{ $$ = zend_ast_create_binary_op(ZEND_AST_AND, $3, $4); }
+	|	'(' T_LOGICAL_XOR lisp_expr lisp_expr ')'	{ $$ = zend_ast_create_binary_op(ZEND_BOOL_XOR, $3, $4); }
+	|	'(' T_IS_IDENTICAL lisp_expr lisp_expr ')'
+			{ $$ = zend_ast_create_binary_op(ZEND_IS_IDENTICAL, $3, $4); }
+	|	'(' T_IS_NOT_IDENTICAL lisp_expr lisp_expr ')'
+			{ $$ = zend_ast_create_binary_op(ZEND_IS_NOT_IDENTICAL, $3, $4); }
+	|	'(' T_IS_EQUAL lisp_expr lisp_expr ')'
+			{ $$ = zend_ast_create_binary_op(ZEND_IS_EQUAL, $3, $4); }
+	|	'(' T_IS_NOT_EQUAL lisp_expr lisp_expr ')'
+			{ $$ = zend_ast_create_binary_op(ZEND_IS_NOT_EQUAL, $3, $4); }
+	|	'(' '<' lisp_expr lisp_expr ')'
+			{ $$ = zend_ast_create_binary_op(ZEND_IS_SMALLER, $3, $4); }
+	|	'(' T_IS_SMALLER_OR_EQUAL lisp_expr lisp_expr ')'
+			{ $$ = zend_ast_create_binary_op(ZEND_IS_SMALLER_OR_EQUAL, $3, $4); }
+	|	'(' '>' lisp_expr lisp_expr ')'
+			{ $$ = zend_ast_create_binary_op(ZEND_AST_GREATER, $3, $4); }
+	|	'(' T_IS_GREATER_OR_EQUAL lisp_expr lisp_expr ')'
+			{ $$ = zend_ast_create_binary_op(ZEND_AST_GREATER_EQUAL, $3, $4); }
+	|	'(' T_SPACESHIP lisp_expr lisp_expr ')'
+			{ $$ = zend_ast_create_binary_op(ZEND_SPACESHIP, $3, $4); }
+;
+
+lisp_scalar:
+		T_LNUMBER 	{ $$ = $1; }
+	|	T_DNUMBER 	{ $$ = $1; }
+	|	T_CONSTANT_ENCAPSED_STRING		{ $$ = $1; }
+	|	'"' encaps_list '"'			 	{ $$ = $2; }
+	|	T_START_HEREDOC T_ENCAPSED_AND_WHITESPACE T_END_HEREDOC { $$ = $2; }
+	|	T_START_HEREDOC T_END_HEREDOC
+			{ $$ = zend_ast_create_zval_from_str(ZSTR_EMPTY_ALLOC()); }
+	|	T_START_HEREDOC encaps_list T_END_HEREDOC { $$ = $2; }
+	|	constant				{ $$ = $1; }
+	// |	class_constant			{ $$ = $1; }
+;
+
+// TODO: (cond (cond1 stmts1) (cond2 stmts2))
+lisp_if_stmt:
+		'(' T_IF lisp_expr lisp_statement ')'
+			{ $$ = zend_ast_create_list(1, ZEND_AST_IF,
+			      zend_ast_create(ZEND_AST_IF_ELEM, $3, $4)); }
+	| 	'(' T_IF lisp_expr lisp_statement lisp_statement ')'
+			{ $$ = zend_ast_create_list(2, ZEND_AST_IF,
+				  zend_ast_create(ZEND_AST_IF_ELEM, $3, $4),
+			      zend_ast_create(ZEND_AST_IF_ELEM, NULL, $5)); }
+;
+
+lisp_while_stmt:
+	'(' T_WHILE lisp_expr lisp_statement ')'
+		{ $$ = zend_ast_create(ZEND_AST_WHILE, $3, $4); }
+;
+
+lisp_argument_list:
+		%empty	{ $$ = zend_ast_create_list(0, ZEND_AST_ARG_LIST); }
+	|	lisp_non_empty_argument_list { $$ = $1; }
+;
+
+lisp_non_empty_argument_list:
+		lisp_argument
+			{ $$ = zend_ast_create_list(1, ZEND_AST_ARG_LIST, $1); }
+	|	lisp_non_empty_argument_list lisp_argument
+			{ $$ = zend_ast_list_add($1, $2); }
+;
+
+lisp_argument:
+		lisp_expr				{ $$ = $1; }
+	|	name ':' lisp_expr
+			{ $$ = zend_ast_create(ZEND_AST_NAMED_ARG, $1, $3); }
+	|	T_ELLIPSIS lisp_expr	{ $$ = zend_ast_create(ZEND_AST_UNPACK, $2); }
+;
+
+lisp_callable_expr:
+		name { $$ = $1; }
+	|	T_VARIABLE { $$ = zend_ast_create(ZEND_AST_VAR, $1); }
+;
+
+
+lisp_function_call:
+		'(' lisp_callable_expr lisp_argument_list ')'
+			{ $$ = zend_ast_create(ZEND_AST_CALL, $2, $3); }
 ;
 
 %%
