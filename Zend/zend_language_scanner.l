@@ -2163,7 +2163,6 @@ string:
 	RETURN_TOKEN(T_OPEN_TAG_WITH_ECHO);
 }
 
-
 <INITIAL>"<?php"([ \t]|{NEWLINE}) {
 	HANDLE_NEWLINE(yytext[yyleng-1]);
 	BEGIN(ST_IN_SCRIPTING);
@@ -2192,6 +2191,17 @@ string:
 	} else {
 		goto inline_char_handler;
 	}
+}
+
+<INITIAL>"(?lisp" {
+	HANDLE_NEWLINE(yytext[yyleng-1]);
+	BEGIN(ST_IN_SCRIPTING);
+	RETURN_TOKEN(T_LISP_START);
+}
+
+<ST_IN_SCRIPTING>"?)" {
+	BEGIN(INITIAL);
+	RETURN_TOKEN(T_LISP_END);
 }
 
 <INITIAL>{ANY_CHAR} {
