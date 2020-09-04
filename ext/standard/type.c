@@ -324,20 +324,13 @@ PHP_FUNCTION(is_array)
 /* {{{ Returns true if variable is an array whose keys are all numeric, sequential, and start at 0 */
 PHP_FUNCTION(is_list)
 {
-	zval *arg;
-	zend_array *arrval;
+	HashTable *array;
 
-	ZEND_PARSE_PARAMETERS_START(1, 1)
-		Z_PARAM_ZVAL(arg)
-	ZEND_PARSE_PARAMETERS_END();
+	ZEND_PARSE_PARAMETERS_START_EX(ZEND_PARSE_PARAMS_QUIET, 1, 1)
+		Z_PARAM_ARRAY(array)
+	ZEND_PARSE_PARAMETERS_END_EX(RETURN_FALSE);
 
-	if (Z_TYPE_P(arg) != IS_ARRAY)
-		RETURN_FALSE;
-
-	arrval = Z_ARRVAL_P(arg);
-
-	/* Empty arrays are lists */
-	RETURN_BOOL(zend_array_is_list(arrval));
+	RETURN_BOOL(zend_array_is_list(array));
 }
 /* }}} */
 
