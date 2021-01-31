@@ -266,7 +266,7 @@ static YYSIZE_T zend_yytnamerr(char*, const char*);
 %type <ast> identifier type_expr_without_static union_type_without_static
 %type <ast> inline_function union_type
 %type <ast> attributed_statement attributed_class_statement attributed_parameter
-%type <ast> attribute_decl attribute attributes attribute_group namespace_declaration_name
+%type <ast> attribute_decl attribute attributes attribute_group namespace_declaration_name optional_namespace_declaration_name
 %type <ast> match match_arm_list non_empty_match_arm_list match_arm match_arm_cond_list
 
 %type <num> returns_ref function fn is_reference is_variadic variable_modifiers
@@ -368,6 +368,11 @@ attributed_statement:
 	|	interface_declaration_statement		{ $$ = $1; }
 ;
 
+optional_namespace_declaration_name:
+		namespace_declaration_name	{ $$ = $1; }
+	|	%empty						{ $$ = NULL; }
+;
+
 top_statement:
 		statement							{ $$ = $1; }
 	|	attributed_statement					{ $$ = $1; }
@@ -376,15 +381,12 @@ top_statement:
 			{ $$ = zend_ast_create(ZEND_AST_HALT_COMPILER,
 			      zend_ast_create_zval_from_long(zend_get_scanned_file_offset()));
 			  zend_stop_lexing(); }
-	|	T_NAMESPACE namespace_declaration_name ';'
+	|	T_NAMESPACE optional_namespace_declaration_name ';'
 			{ $$ = zend_ast_create(ZEND_AST_NAMESPACE, $2, NULL);
 			  RESET_DOC_COMMENT(); }
-	|	T_NAMESPACE namespace_declaration_name { RESET_DOC_COMMENT(); }
+	|	T_NAMESPACE optional_namespace_declaration_name { RESET_DOC_COMMENT(); }
 		'{' top_statement_list '}'
 			{ $$ = zend_ast_create(ZEND_AST_NAMESPACE, $2, $5); }
-	|	T_NAMESPACE { RESET_DOC_COMMENT(); }
-		'{' top_statement_list '}'
-			{ $$ = zend_ast_create(ZEND_AST_NAMESPACE, NULL, $4); }
 	|	T_USE mixed_group_use_declaration ';'		{ $$ = $2; }
 	|	T_USE use_type group_use_declaration ';'	{ $$ = $3; $$->attr = $2; }
 	|	T_USE use_declarations ';'					{ $$ = $2; $$->attr = ZEND_SYMBOL_CLASS; }

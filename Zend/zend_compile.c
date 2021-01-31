@@ -7779,7 +7779,7 @@ void zend_compile_namespace(zend_ast *ast) /* {{{ */
 		}
 	}
 
-	bool is_first_namespace = (!with_bracket && !FC(current_namespace))
+	bool is_first_namespace = (!with_bracket && !FC(current_namespace) && !FC(in_namespace))
 		|| (with_bracket && !FC(has_bracketed_namespaces));
 	if (is_first_namespace && FAILURE == zend_is_first_statement(ast, /* allow_nop */ 1)) {
 		zend_error_noreturn(E_COMPILE_ERROR, "Namespace declaration statement has to be "
