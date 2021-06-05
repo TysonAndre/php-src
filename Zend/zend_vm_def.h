@@ -2601,6 +2601,15 @@ ZEND_VM_C_LABEL(try_assign_dim_array):
 				FREE_OP_DATA();
 			}
 		} else if (EXPECTED(Z_TYPE_P(object_ptr) <= IS_FALSE)) {
+#if OP1_TYPE == IS_CV
+			if (Z_TYPE_P(object_ptr) >= IS_NULL) {
+				zend_error(E_DEPRECATED,
+					"Automatic conversion of %s to array on field assignment is deprecated", Z_TYPE_P(object_ptr) == IS_NULL ? "null" : "false");
+				if (UNEXPECTED(EG(exception))) {
+					ZEND_VM_C_GOTO(assign_dim_error);
+				}
+			}
+#endif
 			if (Z_ISREF_P(orig_object_ptr)
 			 && ZEND_REF_HAS_TYPE_SOURCES(Z_REF_P(orig_object_ptr))
 			 && !zend_verify_ref_array_assignable(Z_REF_P(orig_object_ptr))) {

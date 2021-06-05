@@ -2299,6 +2299,14 @@ fetch_from_array:
 						return;
 					}
 				}
+				if (Z_TYPE_P(container) >= IS_NULL) {
+					zend_error(E_DEPRECATED,
+						"Automatic conversion of %s to array on field assignment is deprecated", Z_TYPE_P(container) == IS_NULL ? "null" : "false");
+					if (UNEXPECTED(EG(exception))) {
+						ZVAL_UNDEF(result);
+						return;
+					}
+				}
 				array_init(container);
 				goto fetch_from_array;
 			} else {
@@ -2354,6 +2362,14 @@ fetch_from_array:
 				ZVAL_UNDEFINED_OP1();
 			}
 			if (type != BP_VAR_UNSET) {
+				if (Z_TYPE_P(container) >= IS_NULL) {
+					zend_error(E_DEPRECATED,
+						"Automatic conversion of %s to array on field assignment is deprecated", Z_TYPE_P(container) == IS_NULL ? "null" : "false");
+					if (UNEXPECTED(EG(exception))) {
+						ZVAL_UNDEF(result);
+						return;
+					}
+				}
 				array_init(container);
 				goto fetch_from_array;
 			} else {
@@ -2863,6 +2879,7 @@ static zend_always_inline void zend_fetch_property_address(zval *result, zval *c
 		name = zval_get_tmp_string(prop_ptr, &tmp_name);
 	}
 	ptr = zobj->handlers->get_property_ptr_ptr(zobj, name, type, cache_slot);
+	// XXX this will create the property if it does not exist and set the type to IS_NULL (only if it is a dynamic property)
 	if (NULL == ptr) {
 		ptr = zobj->handlers->read_property(zobj, name, type, cache_slot, result);
 		if (ptr == result) {
@@ -2882,6 +2899,18 @@ static zend_always_inline void zend_fetch_property_address(zval *result, zval *c
 
 	ZVAL_INDIRECT(result, ptr);
 	if (flags) {
+		if (flags == ZEND_FETCH_DIM_WRITE) {
+			// XXX this will emit a false positive for `$obj->unsetProp[] = 123;` because of the conversion of undefined to the null array.
+			if (Z_TYPE_P(ptr) >= IS_NULL && Z_TYPE_P(ptr) <= IS_FALSE) {
+				zend_error(E_DEPRECATED,
+					"Automatic conversion of %s to array on property field assignment is deprecated", Z_TYPE_P(ptr) == IS_NULL ? "null" : "false");
+				if (UNEXPECTED(EG(exception))) {
+					ZVAL_ERROR(result);
+					goto end;
+				}
+			}
+		}
+
 		zend_property_info *prop_info;
 
 		if (prop_op_type == IS_CONST) {

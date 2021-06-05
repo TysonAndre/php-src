@@ -982,6 +982,7 @@ ZEND_API zval *zend_std_get_property_ptr_ptr(zend_object *zobj, zend_string *nam
 				rebuild_object_properties(zobj);
 			}
 			retval = zend_hash_update(zobj->properties, name, &EG(uninitialized_zval));
+			// NOTE: retval will have type IS_NULL
 			/* Notice is thrown after creation of the property, to avoid EG(std_property_info)
 			 * being overwritten in an error handler. */
 			if (UNEXPECTED(type == BP_VAR_RW || type == BP_VAR_R)) {
