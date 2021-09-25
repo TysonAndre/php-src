@@ -8725,7 +8725,7 @@ ZEND_VM_HANDLER(183, ZEND_BIND_STATIC, CV, UNUSED, REF)
 				HANDLE_EXCEPTION();
 			}
 		}
-		if (UNEXPECTED(extended_value & ZEND_BIND_ACTUALLY_NON_REF)) {
+		if (extended_value & ZEND_BIND_ACTUALLY_NON_REF) {
 			ZVAL_DEREF(value);
 			ZEND_VM_C_GOTO(copy_raw_value);
 		}
