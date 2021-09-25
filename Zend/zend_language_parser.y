@@ -894,8 +894,9 @@ static_var_list:
 ;
 
 static_var:
-		T_VARIABLE			{ $$ = zend_ast_create(ZEND_AST_STATIC, $1, NULL); }
-	|	T_VARIABLE '=' expr	{ $$ = zend_ast_create(ZEND_AST_STATIC, $1, $3); }
+		T_VARIABLE			    { $$ = zend_ast_create(ZEND_AST_STATIC, $1, NULL); }
+	|	T_VARIABLE '=' expr	    { $$ = zend_ast_create(ZEND_AST_STATIC, $1, $3); }
+	|	T_VARIABLE ':' '=' expr	{ $$ = zend_ast_create(ZEND_AST_STATIC, $1, $4); $$->attr = ZEND_BIND_ACTUALLY_NON_REF; }
 ;
 
 class_statement_list:

@@ -1706,7 +1706,7 @@ ZEND_METHOD(ReflectionFunctionAbstract, getClosureUsedVariables)
 
 			Bucket *bucket = (Bucket*)
 				(((char*)static_variables->arData) +
-				(opline->extended_value & ~(ZEND_BIND_REF|ZEND_BIND_IMPLICIT|ZEND_BIND_EXPLICIT)));
+				(opline->extended_value & ~ZEND_BIND_BITFLAG_COMBINATION));
 
 			if (Z_ISUNDEF(bucket->val)) {
 				continue;
