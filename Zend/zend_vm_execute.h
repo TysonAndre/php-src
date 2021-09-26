@@ -47410,14 +47410,11 @@ static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_BIND_STATIC_SPEC_CV_UNUSED_HAN
 				HANDLE_EXCEPTION();
 			}
 		}
-		if (UNEXPECTED(extended_value & ZEND_BIND_ACTUALLY_NON_REF)) {
-			ZVAL_DEREF(value);
-			goto copy_raw_value;
-		}
-
 		i_zval_ptr_dtor(variable_ptr);
 
-		if (UNEXPECTED(!Z_ISREF_P(value))) {
+		if (extended_value & ZEND_BIND_ACTUALLY_NON_REF) {
+			ZVAL_COPY_DEREF(variable_ptr, value);
+		} else if (UNEXPECTED(!Z_ISREF_P(value))) {
 			zend_reference *ref = (zend_reference*)emalloc(sizeof(zend_reference));
 			GC_SET_REFCOUNT(ref, 2);
 			GC_TYPE_INFO(ref) = GC_REFERENCE;

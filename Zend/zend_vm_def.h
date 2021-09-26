@@ -8725,14 +8725,11 @@ ZEND_VM_HANDLER(183, ZEND_BIND_STATIC, CV, UNUSED, REF)
 				HANDLE_EXCEPTION();
 			}
 		}
-		if (extended_value & ZEND_BIND_ACTUALLY_NON_REF) {
-			ZVAL_DEREF(value);
-			ZEND_VM_C_GOTO(copy_raw_value);
-		}
-
 		i_zval_ptr_dtor(variable_ptr);
 
-		if (UNEXPECTED(!Z_ISREF_P(value))) {
+		if (extended_value & ZEND_BIND_ACTUALLY_NON_REF) {
+			ZVAL_COPY_DEREF(variable_ptr, value);
+		} else if (UNEXPECTED(!Z_ISREF_P(value))) {
 			zend_reference *ref = (zend_reference*)emalloc(sizeof(zend_reference));
 			GC_SET_REFCOUNT(ref, 2);
 			GC_TYPE_INFO(ref) = GC_REFERENCE;
@@ -8746,7 +8743,6 @@ ZEND_VM_HANDLER(183, ZEND_BIND_STATIC, CV, UNUSED, REF)
 			ZVAL_REF(variable_ptr, Z_REF_P(value));
 		}
 	} else {
-ZEND_VM_C_LABEL(copy_raw_value):
 		i_zval_ptr_dtor(variable_ptr);
 		ZVAL_COPY(variable_ptr, value);
 	}
