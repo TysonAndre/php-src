@@ -1043,10 +1043,13 @@ static zend_always_inline bool zend_check_arg_send_type(const zend_function *zf,
 #define ZEND_RETURN_VAL 0
 #define ZEND_RETURN_REF 1
 
+/* These bit flags currently must be less than the zval size of 16 bytes, unless ZEND_VM_HANDLER for ZEND_BIND_STATIC is adjusted. */
 #define ZEND_BIND_VAL      0
 #define ZEND_BIND_REF      1
 #define ZEND_BIND_IMPLICIT 2
 #define ZEND_BIND_EXPLICIT 4
+#define ZEND_BIND_ACTUALLY_NON_REF 8
+#define ZEND_BIND_BITFLAG_COMBINATION (ZEND_BIND_REF|ZEND_BIND_IMPLICIT|ZEND_BIND_EXPLICIT|ZEND_BIND_ACTUALLY_NON_REF)
 
 #define ZEND_RETURNS_FUNCTION (1<<0)
 #define ZEND_RETURNS_VALUE    (1<<1)

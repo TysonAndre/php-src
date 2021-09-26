@@ -8715,18 +8715,21 @@ ZEND_VM_HANDLER(183, ZEND_BIND_STATIC, CV, UNUSED, REF)
 	}
 	ZEND_ASSERT(GC_REFCOUNT(ht) == 1);
 
-	value = (zval*)((char*)ht->arData + (opline->extended_value & ~(ZEND_BIND_REF|ZEND_BIND_IMPLICIT|ZEND_BIND_EXPLICIT)));
+	value = (zval*)((char*)ht->arData + (opline->extended_value & ~ZEND_BIND_BITFLAG_COMBINATION));
 
-	if (opline->extended_value & ZEND_BIND_REF) {
+	const uint32_t extended_value = opline->extended_value;
+	if (extended_value & ZEND_BIND_REF) {
 		if (Z_TYPE_P(value) == IS_CONSTANT_AST) {
 			SAVE_OPLINE();
 			if (UNEXPECTED(zval_update_constant_ex(value, EX(func)->op_array.scope) != SUCCESS)) {
 				HANDLE_EXCEPTION();
 			}
 		}
-
 		i_zval_ptr_dtor(variable_ptr);
-		if (UNEXPECTED(!Z_ISREF_P(value))) {
+
+		if (extended_value & ZEND_BIND_ACTUALLY_NON_REF) {
+			ZVAL_COPY_DEREF(variable_ptr, value);
+		} else if (UNEXPECTED(!Z_ISREF_P(value))) {
 			zend_reference *ref = (zend_reference*)emalloc(sizeof(zend_reference));
 			GC_SET_REFCOUNT(ref, 2);
 			GC_TYPE_INFO(ref) = GC_REFERENCE;

@@ -3012,8 +3012,13 @@ static zend_always_inline zend_result _zend_update_type_info(
 			UPDATE_SSA_TYPE(tmp, ssa_op->op1_def);
 			break;
 		case ZEND_BIND_STATIC:
+			/**
+			 * NOTE: External PECL functions such as uopz_set_static allow modifying static variables,
+			 * so they really can have any type.
+			 * This is used in some unit testing frameworks to restore state after a unit test runs.
+			 */
 			tmp = MAY_BE_ANY | MAY_BE_ARRAY_KEY_ANY | MAY_BE_ARRAY_OF_ANY | MAY_BE_ARRAY_OF_REF
-				| ((opline->extended_value & ZEND_BIND_REF) ? MAY_BE_REF : (MAY_BE_RC1 | MAY_BE_RCN));
+				| ((((opline->extended_value & (ZEND_BIND_REF|ZEND_BIND_ACTUALLY_NON_REF)) == ZEND_BIND_REF)) ? MAY_BE_REF : (MAY_BE_RC1 | MAY_BE_RCN));
 			if (opline->extended_value & ZEND_BIND_IMPLICIT) {
 				tmp |= MAY_BE_UNDEF;
 			}
@@ -4409,7 +4414,8 @@ static void zend_mark_cv_references(const zend_op_array *op_array, const zend_sc
 						}
 						break;
 					case ZEND_BIND_STATIC:
-						if (!(opline->extended_value & ZEND_BIND_REF)) {
+						if ((opline->extended_value & (ZEND_BIND_REF|ZEND_BIND_ACTUALLY_NON_REF)) != ZEND_BIND_REF) {
+							/** Anything other than `static $x [= $val];` or `use(&$x) will not create references */
 							continue;
 						}
 						break;
@@ -4795,11 +4801,11 @@ ZEND_API bool zend_may_throw_ex(const zend_op *opline, const zend_ssa_op *ssa_op
 			return (t1 & (MAY_BE_OBJECT|MAY_BE_RESOURCE|MAY_BE_ARRAY_OF_OBJECT|MAY_BE_ARRAY_OF_RESOURCE|MAY_BE_ARRAY_OF_ARRAY));
 		case ZEND_BIND_STATIC:
 			if (t1 & (MAY_BE_OBJECT|MAY_BE_RESOURCE|MAY_BE_ARRAY_OF_OBJECT|MAY_BE_ARRAY_OF_RESOURCE|MAY_BE_ARRAY_OF_ARRAY)) {
-				/* Destructor may throw. */
+				/* Destructor may throw when the new value replaces the old value. */
 				return 1;
 			} else {
-				zval *value = (zval*)((char*)op_array->static_variables->arData + (opline->extended_value & ~(ZEND_BIND_REF|ZEND_BIND_IMPLICIT|ZEND_BIND_EXPLICIT)));
-				/* May throw if initializer is CONSTANT_AST. */
+				zval *value = (zval*)((char*)op_array->static_variables->arData + (opline->extended_value & ~ZEND_BIND_BITFLAG_COMBINATION));
+				/* May throw if initializer is CONSTANT_AST (i.e. an AST instead of a value, because it wasn't precomputed at compile time). */
 				return Z_TYPE_P(value) == IS_CONSTANT_AST;
 			}
 		case ZEND_ASSIGN_DIM:
