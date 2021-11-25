@@ -244,6 +244,13 @@ struct _zend_executor_globals {
 	zend_function trampoline;
 	zend_op       call_trampoline_op;
 
+	/* This is a map from a key corresponding to a zend_object pointer to all the WeakReference and/or WeakMap entries relating to that pointer.
+	 *
+	 * 1. For a single WeakReference,
+	 *    the HashTable's corresponding value's tag is a ZEND_WEAKREF_TAG_REF and the pointer is a singleton WeakReference instance for that zend_object pointer (from WeakReference::create()).
+	 * 2. For a single WeakMap, the HashTable's corresponding value's tag is a ZEND_WEAKREF_TAG_MAP and the pointer is a WeakMap instance.
+	 * 3. For multiple values associated with the same zend_object pointer, the HashTable entry's tag is a ZEND_WEAKREF_TAG_HT with a hash table mapping
+	 *    tagged pointers of at most one WeakReference and 1 or more WeakMaps to the same tagged pointer. */
 	HashTable weakrefs;
 
 	bool exception_ignore_args;
